@@ -88,7 +88,7 @@
 <body>
 <header>
   <h1><span class="logo">amazon</span> &nbsp;UTR Node LVL &middot; First Mile Brasil</h1>
-  <span class="gen">Atualizado: 30/07/2026 16:30</span>
+  <span class="gen">Atualizado: 30/07/2026 16:37</span>
 </header>
 
 <div class="bar">
@@ -234,6 +234,8 @@ function fmt(v, type){
 }
 function metaFor(label){ return METRICS.find(m=>m.label===label); }
 function semNum(s){ const m=(''+s).match(/(\d+)/); return m?parseInt(m[1]):9999; }
+const MESES=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+function mesNome(n){ const i=parseInt(n); return (i>=1&&i<=12)? MESES[i-1] : ('M'+i); }
 function sortLabels(vals, key){
   if(key==='semana') return vals.sort((a,b)=>semNum(a)-semNum(b));
   if(key==='mes') return vals.sort((a,b)=>parseFloat(a)-parseFloat(b));
@@ -516,7 +518,7 @@ function renderTrend(metric,meta){
   const keyFn = GRAN==='semana'? (d=>d.semana) : (GRAN==='mes'? (d=>d.mes) : (d=>d.period));
   const map=aggByKey(rows, keyFn, metric, meta.type);
   const labels=sortLabels(Object.keys(map), GRAN);
-  const series=labels.map(k=>({k: GRAN==='semana'? ('W'+semNum(k)) : (GRAN==='mes'? ('M'+parseInt(k)) : k.slice(5)), v: avg(map[k])}));
+  const series=labels.map(k=>({k: GRAN==='semana'? ('W'+semNum(k)) : (GRAN==='mes'? mesNome(k) : k.slice(5)), v: avg(map[k])}));
   $('lineChart').innerHTML=lineChart(series, meta);
 
   // heatmap mes x semana
@@ -526,7 +528,7 @@ function renderTrend(metric,meta){
   $('heatBody').innerHTML=meses.map(mo=>{
     const cells=semanas.map(s=>{ const sub=rows.filter(d=>d.mes===mo&&d.semana===s); const v=avg(sub.map(d=>d.m[metric]));
       return `<td class="num"><span class="pill ${pillClass(v,meta)}">${fmt(v,meta.type)}</span></td>`; }).join('');
-    return `<tr><td><b>Mês ${parseInt(mo)}</b></td>${cells}</tr>`;
+    return `<tr><td><b>${mesNome(mo)}</b></td>${cells}</tr>`;
   }).join('')||'<tr><td class="muted">Sem dados</td></tr>';
 }
 
@@ -647,7 +649,7 @@ function renderModal(){
     let prev=null, html='';
     meses.forEach(mo=>{ const m=aggMetrics(byM[mo]);
       const cells=METRICS.map(mt=> deltaCell(m[mt.label], prev? prev[mt.label]:null, mt)).join('');
-      html+=`<tr><td><b>Mês ${parseInt(mo)}</b></td>${cells}</tr>`; prev=m; });
+      html+=`<tr><td><b>${mesNome(mo)}</b></td>${cells}</tr>`; prev=m; });
     body.innerHTML=html||`<tr><td class="muted">Sem dados</td></tr>`;
   }
 }
