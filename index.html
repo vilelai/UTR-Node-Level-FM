@@ -88,7 +88,7 @@
 <body>
 <header>
   <h1><span class="logo">amazon</span> &nbsp;UTR Node LVL &middot; First Mile Brasil</h1>
-  <span class="gen">Atualizado: 30/07/2026 17:00</span>
+  <span class="gen">Atualizado: 30/07/2026 17:02</span>
 </header>
 
 <div class="bar">
@@ -188,11 +188,11 @@
       <div class="muted" id="rankHint" style="margin-top:-4px">Barras com escala relativa (do menor ao maior do recorte). Dica: filtre uma Semana pro reporte semanal.</div>
     </div>
     <div class="grid2">
-      <div class="panel dark">
+      <div class="panel">
         <h2><span class="badge best">TOP 10</span> Melhores <span class="muted" id="rbTitle"></span></h2>
         <div class="chartwrap"><div id="rankBest"></div></div>
       </div>
-      <div class="panel dark">
+      <div class="panel">
         <h2><span class="badge worst">TOP 10</span> Piores <span class="muted" id="rwTitle"></span></h2>
         <div class="chartwrap"><div id="rankWorst"></div></div>
       </div>
@@ -453,16 +453,16 @@ function rankBar(items, meta){
     const bx=Math.max(P.l+3, x(it.v)); const w=bx-P.l; const bh=rowH-13; const by=cy+6;
     const glow=glowFor(c);
     // posicao (medalha)
-    svg+=`<text x="14" y="${cy+rowH/2+4}" font-size="12" font-weight="800" fill="#5f7599">${i+1}</text>`;
-    svg+=`<text x="${P.l-8}" y="${cy+rowH/2+4}" text-anchor="end" font-size="12" font-weight="700" fill="#dfe9f7">${it.k}</text>`;
+    svg+=`<text x="14" y="${cy+rowH/2+4}" font-size="12" font-weight="800" fill="#879596">${i+1}</text>`;
+    svg+=`<text x="${P.l-8}" y="${cy+rowH/2+4}" text-anchor="end" font-size="12" font-weight="700" fill="#16191f">${it.k}</text>`;
     // trilho
-    svg+=`<rect x="${P.l}" y="${by}" width="${bw}" height="${bh}" rx="${bh/2}" fill="rgba(255,255,255,.05)"/>`;
+    svg+=`<rect x="${P.l}" y="${by}" width="${bw}" height="${bh}" rx="${bh/2}" fill="rgba(20,25,31,.06)"/>`;
     // barra com gradiente + glow + animacao
-    svg+=`<rect x="${P.l}" y="${by}" width="0" height="${bh}" rx="${bh/2}" fill="${gradFor(c)}" style="filter:drop-shadow(0 0 5px ${glow}88)">`
+    svg+=`<rect x="${P.l}" y="${by}" width="0" height="${bh}" rx="${bh/2}" fill="${gradFor(c)}" style="filter:drop-shadow(0 0 4px ${glow}66)">`
       + `<animate attributeName="width" from="0" to="${w}" dur="0.7s" begin="${i*0.04}s" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.22 1 0.36 1"/></rect>`;
     // ponta luminosa
-    svg+=`<circle cx="${bx}" cy="${by+bh/2}" r="0" fill="#fff" style="filter:drop-shadow(0 0 4px ${glow})"><animate attributeName="r" from="0" to="3" dur="0.5s" begin="${0.5+i*0.04}s" fill="freeze"/></circle>`;
-    svg+=`<text x="${bx+8}" y="${cy+rowH/2+4}" font-size="11" font-weight="700" fill="#eaf2ff">${fmt(it.v,meta.type)}</text>`;
+    svg+=`<circle cx="${bx}" cy="${by+bh/2}" r="0" fill="${glow}" style="filter:drop-shadow(0 0 3px ${glow})"><animate attributeName="r" from="0" to="3" dur="0.5s" begin="${0.5+i*0.04}s" fill="freeze"/></circle>`;
+    svg+=`<text x="${bx+8}" y="${cy+rowH/2+4}" font-size="11" font-weight="700" fill="#16191f">${fmt(it.v,meta.type)}</text>`;
   });
   if(meta.goal!==null && meta.goal>=mn && meta.goal<=mx){ const gx=x(meta.goal);
     svg+=`<line x1="${gx}" y1="${P.t-2}" x2="${gx}" y2="${H-P.b+2}" stroke="#ffb02e" stroke-width="1.5" stroke-dasharray="4,3" style="filter:drop-shadow(0 0 3px #ffb02e)"/>`;
