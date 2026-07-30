@@ -88,7 +88,7 @@
 <body>
 <header>
   <h1><span class="logo">amazon</span> &nbsp;UTR Node LVL &middot; First Mile Brasil</h1>
-  <span class="gen">Atualizado: 30/07/2026 17:09</span>
+  <span class="gen">Atualizado: 30/07/2026 17:56</span>
 </header>
 
 <div class="bar">
@@ -318,14 +318,22 @@ document.querySelectorAll('#rankMetricSeg button').forEach(b=> b.addEventListene
   $('fMetric').value=b.dataset.m; render();
 }));
 
-function applyFilters(ignorePeriod){
+function applyFilters(opts){
+  opts=opts||{};
   return DATA.filter(d=>
     inSet('regional', d.regional) &&
     inSet('def', d.def) &&
-    (ignorePeriod || inSet('semana', d.semana)) &&
-    (ignorePeriod || inSet('mes', d.mes)) &&
+    (opts.ignoreSemana || inSet('semana', d.semana)) &&
+    (opts.ignoreMes || inSet('mes', d.mes)) &&
     inSet('node', d.node)
   );
+}
+function periodSelected(){ return (FILTERS['mes']&&FILTERS['mes'].size) || (FILTERS['semana']&&FILTERS['semana'].size); }
+function periodScopeText(){
+  const parts=[];
+  if(FILTERS['mes']&&FILTERS['mes'].size) parts.push([...FILTERS['mes']].map(mesNome).join(', '));
+  if(FILTERS['semana']&&FILTERS['semana'].size) parts.push([...FILTERS['semana']].join(', '));
+  return parts.join(' · ') || `últ. 15 dias (${WINDOW_TXT})`;
 }
 function avg(arr){ const v=arr.filter(x=>x!==null&&!isNaN(x)); return v.length? v.reduce((a,b)=>a+b,0)/v.length : null; }
 
@@ -484,9 +492,11 @@ function render(){
 }
 
 function renderOverview(metric,meta){
-  // ranking sempre baseado nos ultimos 15 dias (ignora filtro de Semana)
-  let rows=applyFilters(true);
-  if(CUTOFF15) rows=rows.filter(d=> d.period && d.period>=CUTOFF15);
+  // respeita Mes/Semana; sem periodo selecionado -> ultimos 15 dias
+  const periodSel=periodSelected();
+  let rows=applyFilters();
+  if(!periodSel && CUTOFF15) rows=rows.filter(d=> d.period && d.period>=CUTOFF15);
+  const scopeTxt=periodScopeText();
   const agg=aggByNode(rows);
   const cards=$('cards'); cards.innerHTML='';
   METRICS.forEach(mt=>{
@@ -501,8 +511,8 @@ function renderOverview(metric,meta){
   const valid=agg.filter(a=>a.m[metric]!==null&&!isNaN(a.m[metric]));
   const best=[...valid].sort((a,b)=> meta.hib? b.m[metric]-a.m[metric] : a.m[metric]-b.m[metric]);
   const worst=[...valid].sort((a,b)=> meta.hib? a.m[metric]-b.m[metric] : b.m[metric]-a.m[metric]);
-  $('bestMetric').textContent=`· ${metric} · últ. 15 dias (${WINDOW_TXT}) · ${best.length} nodes`;
-  $('worstMetric').textContent=`· ${metric} · últ. 15 dias (${WINDOW_TXT}) · ${worst.length} nodes`;
+  $('bestMetric').textContent=`· ${metric} · ${scopeTxt} · ${best.length} nodes`;
+  $('worstMetric').textContent=`· ${metric} · ${scopeTxt} · ${worst.length} nodes`;
   const rr=(a,i)=>`<tr><td class="rank">${i+1}</td><td>${a.node}</td><td class="muted">${a.regional||''} ${a.def||''}</td><td class="num"><span class="pill ${pillClass(a.m[metric],meta)}">${fmt(a.m[metric],meta.type)}</span></td></tr>`;
   $('bestBody').innerHTML=best.map(rr).join('')||'<tr><td class="muted">Sem dados</td></tr>';
   $('worstBody').innerHTML=worst.map(rr).join('')||'<tr><td class="muted">Sem dados</td></tr>';
@@ -512,13 +522,13 @@ function renderOverview(metric,meta){
     const cells=METRICS.map(m=>`<td class="num"><span class="pill ${pillClass(a.m[m.label],m)}">${fmt(a.m[m.label],m.type)}</span></td>`).join('');
     return `<tr data-node="${a.node}"><td>${a.node}</td><td class="muted">${a.regional||''}</td><td class="muted">${a.def||''}</td>${cells}</tr>`;
   }).join('');
-  $('detailCount').textContent=`· últ. 15 dias (${WINDOW_TXT}) · ${agg.length} nodes / ${rows.length} registros`;
+  $('detailCount').textContent=`· ${scopeTxt} · ${agg.length} nodes / ${rows.length} registros`;
 }
 
 function renderTrend(metric,meta){
   const fn=FILTERS['node']; const scope = fn && fn.size? ` · nodes: ${[...fn].join(', ')}` : ' · todos os nodes';
   $('trendMetric').textContent='· '+metric+scope;
-  const rows=applyFilters(true); // ignora filtro de semana para ver a serie inteira
+  const rows=applyFilters({ignoreSemana:true}); // respeita Mes; ignora Semana p/ ver a serie
   const keyFn = GRAN==='semana'? (d=>d.semana) : (GRAN==='mes'? (d=>d.mes) : (d=>d.period));
   const map=aggByKey(rows, keyFn, metric, meta.type);
   const labels=sortLabels(Object.keys(map), GRAN);
@@ -538,19 +548,11 @@ function renderTrend(metric,meta){
 
 function renderRanking(metric,meta){
   $('regMetric').textContent='· '+metric;
-  const mesSel=FILTERS['mes']&&FILTERS['mes'].size;
-  const semSel=FILTERS['semana']&&FILTERS['semana'].size;
-  const periodSel=mesSel||semSel;
+  const periodSel=periodSelected();
   let rows=applyFilters();
   // sem periodo selecionado -> ultimos 15 dias; com mes/semana -> respeita o filtro
   if(!periodSel && CUTOFF15) rows=rows.filter(d=> d.period && d.period>=CUTOFF15);
-  let scopeTxt;
-  if(periodSel){ const parts=[];
-    if(mesSel) parts.push([...FILTERS['mes']].map(mesNome).join(', '));
-    if(semSel) parts.push([...FILTERS['semana']].join(', '));
-    scopeTxt=parts.join(' · ');
-  } else scopeTxt=`últ. 15 dias (${WINDOW_TXT})`;
-  $('rankScope').textContent = '· '+metric+' · '+scopeTxt;
+  $('rankScope').textContent = '· '+metric+' · '+periodScopeText();
   // sync botoes rapidos de metrica
   document.querySelectorAll('#rankMetricSeg button').forEach(b=> b.classList.toggle('active', b.dataset.m===metric));
 
