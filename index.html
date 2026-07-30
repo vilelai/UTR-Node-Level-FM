@@ -88,7 +88,7 @@
 <body>
 <header>
   <h1><span class="logo">amazon</span> &nbsp;UTR Node LVL &middot; First Mile Brasil</h1>
-  <span class="gen">Atualizado: 30/07/2026 17:56</span>
+  <span class="gen">Atualizado: 30/07/2026 18:00</span>
 </header>
 
 <div class="bar">
@@ -634,11 +634,11 @@ function renderModal(){
     head.innerHTML='<th>Data</th><th>Semana</th>'+metricCols;
     // uma linha por dia (agrega se houver mais de um registro no mesmo dia)
     const byDate={}; rows.forEach(r=>{ if(!r.period) return; (byDate[r.period]=byDate[r.period]||[]).push(r); });
-    const dates=Object.keys(byDate).sort();
+    const dates=Object.keys(byDate).sort().reverse(); // mais recentes no topo
     let html='', lastWeek=null, lastMonth=null;
     dates.forEach(dt=>{
       const grp=byDate[dt]; const sem=grp[0].semana, mes=grp[0].mes;
-      if(mes!==lastMonth){ html+=`<tr class="weekhdr"><td colspan="${METRICS.length+2}">📅 Mês ${parseInt(mes)}</td></tr>`; lastMonth=mes; lastWeek=null; }
+      if(mes!==lastMonth){ html+=`<tr class="weekhdr"><td colspan="${METRICS.length+2}">📅 ${mesNome(mes)}</td></tr>`; lastMonth=mes; lastWeek=null; }
       if(sem!==lastWeek){ html+=`<tr class="weekhdr"><td colspan="${METRICS.length+2}">&nbsp;&nbsp;&nbsp;${sem}</td></tr>`; lastWeek=sem; }
       const m=aggMetrics(grp);
       const cells=METRICS.map(mt=>`<td class="num"><span class="pill ${pillClass(m[mt.label],mt)}">${fmt(m[mt.label],mt.type)}</span></td>`).join('');
@@ -650,22 +650,26 @@ function renderModal(){
   else if(MODAL_MODE==='sxs'){
     head.innerHTML='<th>Semana</th>'+metricCols;
     const byW={}; rows.forEach(r=>{ if(r.semana==null) return; (byW[r.semana]=byW[r.semana]||[]).push(r); });
-    const weeks=sortLabels(Object.keys(byW),'semana');
-    let prev=null, html='';
-    weeks.forEach(w=>{ const m=aggMetrics(byW[w]);
-      const cells=METRICS.map(mt=> deltaCell(m[mt.label], prev? prev[mt.label]:null, mt)).join('');
-      html+=`<tr><td><b>${w}</b></td>${cells}</tr>`; prev=m; });
+    const weeks=sortLabels(Object.keys(byW),'semana'); // cronologico p/ delta correto
+    let prev=null; const linhas=[];
+    weeks.forEach(w=>{ const m=aggMetrics(byW[w]); linhas.push({label:w, m, prev}); prev=m; });
+    let html='';
+    linhas.reverse().forEach(L=>{ // exibe recente no topo
+      const cells=METRICS.map(mt=> deltaCell(L.m[mt.label], L.prev? L.prev[mt.label]:null, mt)).join('');
+      html+=`<tr><td><b>${L.label}</b></td>${cells}</tr>`; });
     body.innerHTML=html||`<tr><td class="muted">Sem dados</td></tr>`;
   }
 
   else { // mxm
     head.innerHTML='<th>Mês</th>'+metricCols;
     const byM={}; rows.forEach(r=>{ if(r.mes==null) return; (byM[r.mes]=byM[r.mes]||[]).push(r); });
-    const meses=sortLabels(Object.keys(byM),'mes');
-    let prev=null, html='';
-    meses.forEach(mo=>{ const m=aggMetrics(byM[mo]);
-      const cells=METRICS.map(mt=> deltaCell(m[mt.label], prev? prev[mt.label]:null, mt)).join('');
-      html+=`<tr><td><b>${mesNome(mo)}</b></td>${cells}</tr>`; prev=m; });
+    const meses=sortLabels(Object.keys(byM),'mes'); // cronologico p/ delta correto
+    let prev=null; const linhas=[];
+    meses.forEach(mo=>{ const m=aggMetrics(byM[mo]); linhas.push({label:mesNome(mo), m, prev}); prev=m; });
+    let html='';
+    linhas.reverse().forEach(L=>{ // exibe recente no topo
+      const cells=METRICS.map(mt=> deltaCell(L.m[mt.label], L.prev? L.prev[mt.label]:null, mt)).join('');
+      html+=`<tr><td><b>${L.label}</b></td>${cells}</tr>`; });
     body.innerHTML=html||`<tr><td class="muted">Sem dados</td></tr>`;
   }
 }
