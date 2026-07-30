@@ -88,7 +88,7 @@
 <body>
 <header>
   <h1><span class="logo">amazon</span> &nbsp;UTR Node LVL &middot; First Mile Brasil</h1>
-  <span class="gen">Atualizado: 30/07/2026 17:02</span>
+  <span class="gen">Atualizado: 30/07/2026 17:07</span>
 </header>
 
 <div class="bar">
@@ -534,9 +534,11 @@ function renderTrend(metric,meta){
 
 function renderRanking(metric,meta){
   $('regMetric').textContent='· '+metric;
-  const rows=applyFilters();
   const semSel=FILTERS['semana']&&FILTERS['semana'].size;
-  $('rankScope').textContent = '· '+metric+(semSel? ' · '+[...FILTERS['semana']].join(', ') : ' · todo o período filtrado');
+  let rows=applyFilters();
+  // sem semana selecionada -> ultimos 15 dias; com semana -> respeita o filtro
+  if(!semSel && CUTOFF15) rows=rows.filter(d=> d.period && d.period>=CUTOFF15);
+  $('rankScope').textContent = '· '+metric+(semSel? ' · '+[...FILTERS['semana']].join(', ') : ` · últ. 15 dias (${WINDOW_TXT})`);
   // sync botoes rapidos de metrica
   document.querySelectorAll('#rankMetricSeg button').forEach(b=> b.classList.toggle('active', b.dataset.m===metric));
 
