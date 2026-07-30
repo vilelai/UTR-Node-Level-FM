@@ -1,0 +1,6 @@
+# Arquivos locais que NAO vao pro GitHub (so o index.html sobe)
+update_node_lvl_dashboard.py
+Atualizar UTR Node LVL.bat
+node-lvl-dashboard.html
+__pycache__/
+*.pyc
