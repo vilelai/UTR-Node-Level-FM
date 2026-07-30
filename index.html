@@ -88,7 +88,7 @@
 <body>
 <header>
   <h1><span class="logo">amazon</span> &nbsp;UTR Node LVL &middot; First Mile Brasil</h1>
-  <span class="gen">Atualizado: 30/07/2026 16:37</span>
+  <span class="gen">Atualizado: 30/07/2026 17:00</span>
 </header>
 
 <div class="bar">
@@ -197,7 +197,7 @@
         <div class="chartwrap"><div id="rankWorst"></div></div>
       </div>
     </div>
-    <div class="panel dark">
+    <div class="panel">
       <h2>Média por Regional <span class="muted" id="regMetric"></span></h2>
       <div class="chartwrap"><div id="regChart"></div></div>
     </div>
@@ -424,11 +424,11 @@ function hbarChart(items, meta){
   let svg=`<svg width="${W}" height="${H}">`+svgDefs();
   items.forEach((it,i)=>{ const cy=P.t+i*rowH; const c=dotClass(it.v,meta);
     const glow=glowFor(c); const bh=rowH-16; const by=cy+8; const w=x(it.v)-P.l;
-    svg+=`<text x="${P.l-10}" y="${cy+rowH/2+4}" text-anchor="end" font-size="13" font-weight="700" fill="#dfe9f7">${it.k}</text>`;
-    svg+=`<rect x="${P.l}" y="${by}" width="${bw}" height="${bh}" rx="${bh/2}" fill="rgba(255,255,255,.05)"/>`;
-    svg+=`<rect x="${P.l}" y="${by}" width="0" height="${bh}" rx="${bh/2}" fill="${gradFor(c)}" style="filter:drop-shadow(0 0 6px ${glow}88)">`
+    svg+=`<text x="${P.l-10}" y="${cy+rowH/2+4}" text-anchor="end" font-size="13" font-weight="700" fill="#16191f">${it.k}</text>`;
+    svg+=`<rect x="${P.l}" y="${by}" width="${bw}" height="${bh}" rx="${bh/2}" fill="rgba(20,25,31,.06)"/>`;
+    svg+=`<rect x="${P.l}" y="${by}" width="0" height="${bh}" rx="${bh/2}" fill="${gradFor(c)}" style="filter:drop-shadow(0 0 5px ${glow}66)">`
       + `<animate attributeName="width" from="0" to="${Math.max(2,w)}" dur="0.8s" begin="${i*0.06}s" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.22 1 0.36 1"/></rect>`;
-    svg+=`<text x="${x(it.v)+8}" y="${cy+rowH/2+4}" font-size="12" font-weight="700" fill="#eaf2ff">${fmt(it.v,meta.type)}</text>`; });
+    svg+=`<text x="${x(it.v)+8}" y="${cy+rowH/2+4}" font-size="12" font-weight="700" fill="#16191f">${fmt(it.v,meta.type)}</text>`; });
   if(meta.goal!==null){ const gx=x(meta.goal);
     svg+=`<line x1="${gx}" y1="${P.t}" x2="${gx}" y2="${H-P.b}" stroke="#ffb02e" stroke-width="1.5" stroke-dasharray="5,4" style="filter:drop-shadow(0 0 3px #ffb02e)"/>`;
     svg+=`<text x="${gx+3}" y="${H-7}" font-size="10" fill="#ffb02e">Meta ${fmt(meta.goal,meta.type)}</text>`; }
