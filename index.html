@@ -88,13 +88,14 @@
 <body>
 <header>
   <h1><span class="logo">amazon</span> &nbsp;UTR Node LVL &middot; First Mile Brasil</h1>
-  <span class="gen">Atualizado: 30/07/2026 17:07</span>
+  <span class="gen">Atualizado: 30/07/2026 17:09</span>
 </header>
 
 <div class="bar">
   <div class="ctrl"><label>Métrica</label><select id="fMetric"></select></div>
   <div class="ctrl"><label>Regional</label><div class="ms" id="msRegional"></div></div>
   <div class="ctrl"><label>Tipo (SPC/PN)</label><div class="ms" id="msDef"></div></div>
+  <div class="ctrl"><label>Mês</label><div class="ms" id="msMes"></div></div>
   <div class="ctrl"><label>Semana</label><div class="ms" id="msSemana"></div></div>
   <div class="ctrl"><label>Node</label><div class="ms" id="msNode"></div></div>
   <div class="ctrl"><label>&nbsp;</label><button id="fReset" class="resetbtn">↺ Reset filters</button></div>
@@ -249,7 +250,8 @@ $('fMetric').addEventListener('change', render);
 // multi-select por checkbox
 const FILTERS={}, MULTI=[];
 function esc(s){ return String(s).replace(/"/g,'&quot;'); }
-function buildMulti(mountId, name, values, sortKey, withSearch){
+function buildMulti(mountId, name, values, sortKey, withSearch, labelFn){
+  const lab = labelFn || (x=>x);
   FILTERS[name]=new Set();
   const el=$(mountId);
   const btn=document.createElement('button'); btn.type='button'; btn.className='ms-btn';
@@ -258,11 +260,11 @@ function buildMulti(mountId, name, values, sortKey, withSearch){
   const searchHtml = withSearch? '<input class="ms-search" placeholder="buscar...">' : '';
   panel.innerHTML = searchHtml
     + '<label class="ms-all"><input type="checkbox" data-all="1" checked> <b>Todos</b></label>'
-    + sorted.map(v=>`<label data-v="${esc(v).toLowerCase()}"><input type="checkbox" value="${esc(v)}"> ${v}</label>`).join('');
+    + sorted.map(v=>`<label data-v="${esc(lab(v)).toLowerCase()}"><input type="checkbox" value="${esc(v)}"> ${lab(v)}</label>`).join('');
   el.appendChild(btn); el.appendChild(panel);
 
   function updateBtn(){ const s=FILTERS[name];
-    btn.textContent = s.size===0 ? 'Todos ▾' : (s.size===1? [...s][0]+' ▾' : s.size+' selecionados ▾');
+    btn.textContent = s.size===0 ? 'Todos ▾' : (s.size===1? lab([...s][0])+' ▾' : s.size+' selecionados ▾');
     panel.querySelector('input[data-all]').checked = s.size===0;
   }
   btn.addEventListener('click', e=>{ e.stopPropagation();
@@ -286,6 +288,7 @@ function buildMulti(mountId, name, values, sortKey, withSearch){
 }
 buildMulti('msRegional','regional', uniq(DATA.map(d=>d.regional)));
 buildMulti('msDef','def', uniq(DATA.map(d=>d.def)));
+buildMulti('msMes','mes', uniq(DATA.map(d=>d.mes)), 'mes', false, mesNome);
 buildMulti('msSemana','semana', uniq(DATA.map(d=>d.semana)), 'semana');
 buildMulti('msNode','node', uniq(DATA.map(d=>d.node)), null, true);
 document.addEventListener('click', ()=> document.querySelectorAll('.ms-panel.open').forEach(p=>p.classList.remove('open')));
@@ -315,11 +318,12 @@ document.querySelectorAll('#rankMetricSeg button').forEach(b=> b.addEventListene
   $('fMetric').value=b.dataset.m; render();
 }));
 
-function applyFilters(ignoreSemana){
+function applyFilters(ignorePeriod){
   return DATA.filter(d=>
     inSet('regional', d.regional) &&
     inSet('def', d.def) &&
-    (ignoreSemana || inSet('semana', d.semana)) &&
+    (ignorePeriod || inSet('semana', d.semana)) &&
+    (ignorePeriod || inSet('mes', d.mes)) &&
     inSet('node', d.node)
   );
 }
@@ -534,11 +538,19 @@ function renderTrend(metric,meta){
 
 function renderRanking(metric,meta){
   $('regMetric').textContent='· '+metric;
+  const mesSel=FILTERS['mes']&&FILTERS['mes'].size;
   const semSel=FILTERS['semana']&&FILTERS['semana'].size;
+  const periodSel=mesSel||semSel;
   let rows=applyFilters();
-  // sem semana selecionada -> ultimos 15 dias; com semana -> respeita o filtro
-  if(!semSel && CUTOFF15) rows=rows.filter(d=> d.period && d.period>=CUTOFF15);
-  $('rankScope').textContent = '· '+metric+(semSel? ' · '+[...FILTERS['semana']].join(', ') : ` · últ. 15 dias (${WINDOW_TXT})`);
+  // sem periodo selecionado -> ultimos 15 dias; com mes/semana -> respeita o filtro
+  if(!periodSel && CUTOFF15) rows=rows.filter(d=> d.period && d.period>=CUTOFF15);
+  let scopeTxt;
+  if(periodSel){ const parts=[];
+    if(mesSel) parts.push([...FILTERS['mes']].map(mesNome).join(', '));
+    if(semSel) parts.push([...FILTERS['semana']].join(', '));
+    scopeTxt=parts.join(' · ');
+  } else scopeTxt=`últ. 15 dias (${WINDOW_TXT})`;
+  $('rankScope').textContent = '· '+metric+' · '+scopeTxt;
   // sync botoes rapidos de metrica
   document.querySelectorAll('#rankMetricSeg button').forEach(b=> b.classList.toggle('active', b.dataset.m===metric));
 
