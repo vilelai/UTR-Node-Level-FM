@@ -97,7 +97,7 @@
 <body>
 <header>
   <h1><span class="logo">amazon</span> &nbsp;UTR Node LVL &middot; First Mile Brasil</h1>
-  <span class="gen">Atualizado: 31/07/2026 11:00</span>
+  <span class="gen">Atualizado: 31/07/2026 11:07</span>
 </header>
 
 <div class="bar">
@@ -355,21 +355,27 @@ function periodScopeText(){
 }
 function avg(arr){ const v=arr.filter(x=>x!==null&&!isNaN(x)); return v.length? v.reduce((a,b)=>a+b,0)/v.length : null; }
 
-function aggByKey(rows, keyFn, metric, type){
-  const map={};
-  rows.forEach(d=>{ const k=keyFn(d); if(k===null||k===undefined||k==='') return; (map[k]=map[k]||[]).push(d.m[metric]); });
-  return map;
+// Volume usado como peso (mesmo criterio do QuickSight).
+const VOL='Picked Up (vol)';
+// media ponderada por volume; type 'int' => soma; fallback media simples se sem volume.
+function wagg(rows, label, type){
+  if(type==='int'){ let s=0, any=false; rows.forEach(r=>{ const v=r.m[label]; if(v!=null&&!isNaN(v)){ s+=v; any=true; } }); return any? s : null; }
+  let sw=0, svw=0, ss=0, c=0;
+  rows.forEach(r=>{ const v=r.m[label]; if(v==null||isNaN(v)) return; ss+=v; c++;
+    const w=r.m[VOL]; if(w!=null&&!isNaN(w)&&w>0){ svw+=v*w; sw+=w; } });
+  if(sw>0) return svw/sw;
+  return c? ss/c : null;
+}
+function weightedByKey(rows, keyFn, metric, type){
+  const groups={};
+  rows.forEach(d=>{ const k=keyFn(d); if(k==null||k==='') return; (groups[k]=groups[k]||[]).push(d); });
+  const out={}; for(const k in groups) out[k]=wagg(groups[k], metric, type); return out;
 }
 function aggByNode(rows){
-  const map={};
-  rows.forEach(d=>{
-    if(!map[d.node]) map[d.node]={node:d.node, regional:d.regional, def:d.def, m:{}, cnt:{}};
-    METRICS.forEach(mt=>{ const v=d.m[mt.label]; if(v===null||isNaN(v)) return;
-      if(!(mt.label in map[d.node].m)){ map[d.node].m[mt.label]=0; map[d.node].cnt[mt.label]=0; }
-      map[d.node].m[mt.label]+=v; map[d.node].cnt[mt.label]+=1; });
-  });
-  return Object.values(map).map(n=>{ const out={node:n.node,regional:n.regional,def:n.def,m:{}};
-    METRICS.forEach(mt=>{ out.m[mt.label]= n.cnt[mt.label]? (mt.type==='int'? n.m[mt.label] : n.m[mt.label]/n.cnt[mt.label]) : null; });
+  const groups={};
+  rows.forEach(d=>{ if(!groups[d.node]) groups[d.node]={node:d.node,regional:d.regional,def:d.def,rows:[]}; groups[d.node].rows.push(d); });
+  return Object.values(groups).map(g=>{ const out={node:g.node,regional:g.regional,def:g.def,m:{}};
+    METRICS.forEach(mt=>{ out.m[mt.label]=wagg(g.rows, mt.label, mt.type); });
     return out; })
     // remove nodes sem NENHUM indicador (linhas totalmente vazias)
     .filter(n=> METRICS.some(mt=> n.m[mt.label]!==null && !isNaN(n.m[mt.label])));
@@ -553,7 +559,7 @@ function renderOverview(metric,meta){
   const cards=$('cards'); cards.innerHTML='';
   METRICS.forEach(mt=>{
     const lb=mt.label;
-    const a=avg(agg.map(x=>x.m[lb]));
+    const a=wagg(rows, lb, mt.type);
     const c=document.createElement('div'); c.className='card'+(lb===metric?' active':'');
     c.dataset.metric=lb;
     c.innerHTML=`<div class="k">${lb}</div><div class="v">${fmt(a,mt.type)}</div><div class="sub">clique p/ ranking · ${agg.length} nodes</div>`;
@@ -582,9 +588,9 @@ function renderTrend(metric,meta){
   $('trendMetric').textContent='· '+metric+scope;
   const rows=applyFilters({ignoreSemana:true}); // respeita Mes; ignora Semana p/ ver a serie
   const keyFn = GRAN==='semana'? (d=>d.semana) : (GRAN==='mes'? (d=>d.mes) : (d=>d.period));
-  const map=aggByKey(rows, keyFn, metric, meta.type);
+  const map=weightedByKey(rows, keyFn, metric, meta.type);
   const labels=sortLabels(Object.keys(map), GRAN);
-  const series=labels.map(k=>({k: GRAN==='semana'? ('W'+semNum(k)) : (GRAN==='mes'? mesNome(k) : k.slice(5)), v: avg(map[k])}));
+  const series=labels.map(k=>({k: GRAN==='semana'? ('W'+semNum(k)) : (GRAN==='mes'? mesNome(k) : k.slice(5)), v: map[k]}));
   $('lineChart').innerHTML=lineChart(series, meta);
 
   // heatmap mes x semana
@@ -592,7 +598,7 @@ function renderTrend(metric,meta){
   const semanas=sortLabels(uniq(rows.map(d=>d.semana)),'semana');
   $('heatHead').innerHTML='<th>Mês \\ Semana</th>'+semanas.map(s=>`<th class="num">W${semNum(s)}</th>`).join('');
   $('heatBody').innerHTML=meses.map(mo=>{
-    const cells=semanas.map(s=>{ const sub=rows.filter(d=>d.mes===mo&&d.semana===s); const v=avg(sub.map(d=>d.m[metric]));
+    const cells=semanas.map(s=>{ const sub=rows.filter(d=>d.mes===mo&&d.semana===s); const v=wagg(sub, metric, meta.type);
       return `<td class="num"><span class="pill ${pillClass(v,meta)}">${fmt(v,meta.type)}</span></td>`; }).join('');
     return `<tr><td><b>${mesNome(mo)}</b></td>${cells}</tr>`;
   }).join('')||'<tr><td class="muted">Sem dados</td></tr>';
@@ -652,8 +658,8 @@ function renderRanking(metric,meta){
   $('rankWorstNote').innerHTML=noteWorst(byMetric, meta, metric);
 
   // barras por regional
-  const rmap=aggByKey(rows, d=>d.regional, metric, meta.type);
-  let regItems=Object.keys(rmap).map(k=>({k, v:avg(rmap[k])})).filter(i=>i.v!==null);
+  const rmap=weightedByKey(rows, d=>d.regional, metric, meta.type);
+  let regItems=Object.keys(rmap).map(k=>({k, v:rmap[k]})).filter(i=>i.v!==null);
   regItems.sort((a,b)=> meta.hib? b.v-a.v : a.v-b.v);
   $('regChart').innerHTML=colBarChart(regItems, meta);
   $('regNote').innerHTML=noteRegional(regItems, meta);
@@ -665,7 +671,7 @@ function renderRanking(metric,meta){
   agg.sort((a,b)=> meta.hib? b.m[metric]-a.m[metric] : a.m[metric]-b.m[metric]);
   $('rankHead').innerHTML='<th class="rank">#</th><th>Node</th><th>Regional</th><th class="num">'+metric+'</th>'+lastWeeks.map(w=>`<th class="num">W${semNum(w)}</th>`).join('')+'<th>Status</th>';
   $('rankBody').innerHTML=agg.map((a,i)=>{
-    const dots=lastWeeks.map(w=>{ const sub=rows.filter(d=>d.node===a.node&&d.semana===w); const v=avg(sub.map(d=>d.m[metric]));
+    const dots=lastWeeks.map(w=>{ const sub=rows.filter(d=>d.node===a.node&&d.semana===w); const v=wagg(sub, metric, meta.type);
       return `<td class="num"><span class="dot ${dotClass(v,meta)}" title="W${semNum(w)}: ${fmt(v,meta.type)}"></span></td>`; }).join('');
     const st=dotClass(a.m[metric],meta);
     return `<tr><td class="rank">${i+1}</td><td>${a.node}</td><td class="muted">${a.regional||''}</td><td class="num"><span class="pill ${pillClass(a.m[metric],meta)}">${fmt(a.m[metric],meta.type)}</span></td>${dots}<td><span class="dot ${st}"></span></td></tr>`;
@@ -698,7 +704,7 @@ function openNodeModal(node){ MODAL_NODE=node; MODAL_MODE='dia';
 // media das metricas de um conjunto de linhas
 function aggMetrics(rows){
   const out={};
-  METRICS.forEach(mt=>{ const v=avg(rows.map(r=>r.m[mt.label])); out[mt.label]= (mt.type==='int'&&v!==null)? rows.reduce((s,r)=> s+((r.m[mt.label]||0)),0) : v; });
+  METRICS.forEach(mt=>{ out[mt.label]=wagg(rows, mt.label, mt.type); });
   return out;
 }
 function deltaCell(cur, prev, meta){
