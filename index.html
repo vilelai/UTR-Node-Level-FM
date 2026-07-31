@@ -88,7 +88,7 @@
 <body>
 <header>
   <h1><span class="logo">amazon</span> &nbsp;UTR Node LVL &middot; First Mile Brasil</h1>
-  <span class="gen">Atualizado: 31/07/2026 10:30</span>
+  <span class="gen">Atualizado: 31/07/2026 10:35</span>
 </header>
 
 <div class="bar">
@@ -389,7 +389,7 @@ function glowFor(cls){ return cls==='dg'?'#8bc4a3':cls==='dy'?'#e3c680':cls==='d
 // ---------- SVG COLUMN CHART (barras verticais + linha de meta) ----------
 function colBarChart(items, meta){
   if(!items.length) return '<div class="muted">Sem dados.</div>';
-  const n=items.length, colW=66, gap=58, P={t:26,r:28,b:46,l:58};
+  const n=items.length, many=n>6, colW=many?44:66, gap=many?30:58, P={t:26,r:28,b:46,l:58};
   const W=P.l+P.r + n*colW + n*gap, H=330, ih=H-P.t-P.b;
   const vals=items.map(i=>i.v);
   let mn=Math.min(...vals), mx=Math.max(...vals);
@@ -410,8 +410,8 @@ function colBarChart(items, meta){
     svg+=`<rect x="${bx}" y="${base}" width="${colW}" height="0" rx="7" fill="${gradFor(c)}" style="filter:drop-shadow(0 0 3px ${glow}44)">`
       +`<animate attributeName="height" from="0" to="${bh}" dur="0.8s" begin="${i*0.08}s" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.22 1 0.36 1"/>`
       +`<animate attributeName="y" from="${base}" to="${by}" dur="0.8s" begin="${i*0.08}s" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.22 1 0.36 1"/></rect>`;
-    svg+=`<text x="${bx+colW/2}" y="${by-9}" text-anchor="middle" font-size="12" font-weight="700" fill="#16191f">${fmt(it.v,meta.type)}</text>`;
-    svg+=`<text x="${bx+colW/2}" y="${H-P.b+20}" text-anchor="middle" font-size="12" font-weight="600" fill="#37475a">${it.k}</text>`; });
+    svg+=`<text x="${bx+colW/2}" y="${by-9}" text-anchor="middle" font-size="${many?9.5:12}" font-weight="700" fill="#16191f">${fmt(it.v,meta.type)}</text>`;
+    svg+=`<text x="${bx+colW/2}" y="${H-P.b+20}" text-anchor="middle" font-size="${many?11:12}" font-weight="600" fill="#37475a">${it.k}</text>`; });
   // linha de meta (target) atravessando
   if(meta.goal!==null && meta.goal>=mn && meta.goal<=mx){ const gy=y(meta.goal);
     svg+=`<line x1="${P.l}" y1="${gy}" x2="${W-P.r}" y2="${gy}" stroke="#ff9900" stroke-width="2" stroke-dasharray="6,4" style="filter:drop-shadow(0 0 3px #ff990088)"/>`;
@@ -595,8 +595,8 @@ function renderRanking(metric,meta){
   const best=byMetric.slice(0,10).map(a=>({k:a.node, v:a.m[metric]}));
   const worst=byMetric.slice(-10).reverse().map(a=>({k:a.node, v:a.m[metric]}));
   $('rbTitle').textContent='· '+metric; $('rwTitle').textContent='· '+metric;
-  $('rankBest').innerHTML=rankBar(best, meta);
-  $('rankWorst').innerHTML=rankBar(worst, meta);
+  $('rankBest').innerHTML=colBarChart(best, meta);
+  $('rankWorst').innerHTML=colBarChart(worst, meta);
 
   // barras por regional
   const rmap=aggByKey(rows, d=>d.regional, metric, meta.type);
