@@ -97,7 +97,7 @@
 <body>
 <header>
   <h1><span class="logo">amazon</span> &nbsp;UTR Node LVL &middot; First Mile Brasil</h1>
-  <span class="gen">Atualizado: 31/07/2026 10:43</span>
+  <span class="gen">Atualizado: 31/07/2026 10:47</span>
 </header>
 
 <div class="bar">
@@ -428,12 +428,13 @@ function colBarChart(items, meta){
     svg+=`<rect x="${bx}" y="${base}" width="${colW}" height="0" rx="7" fill="${gradFor(c)}" style="filter:drop-shadow(0 0 3px ${glow}44)">`
       +`<animate attributeName="height" from="0" to="${bh}" dur="0.8s" begin="${i*0.08}s" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.22 1 0.36 1"/>`
       +`<animate attributeName="y" from="${base}" to="${by}" dur="0.8s" begin="${i*0.08}s" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.22 1 0.36 1"/></rect>`;
-    svg+=`<text x="${bx+colW/2}" y="${by-9}" text-anchor="middle" font-size="${many?9.5:12}" font-weight="700" fill="#16191f">${fmt(it.v,meta.type)}</text>`;
+    svg+=`<text x="${bx+colW/2}" y="${Math.max(14, by-9)}" text-anchor="middle" font-size="${many?9.5:12}" font-weight="700" fill="#16191f">${fmt(it.v,meta.type)}</text>`;
     svg+=`<text x="${bx+colW/2}" y="${H-P.b+20}" text-anchor="middle" font-size="${many?11:12}" font-weight="600" fill="#37475a">${it.k}</text>`; });
-  // linha de meta (target) atravessando
+  // linha de meta (target) atravessando; rotulo a esquerda, sempre visivel
   if(meta.goal!==null && meta.goal>=mn && meta.goal<=mx){ const gy=y(meta.goal);
     svg+=`<line x1="${P.l}" y1="${gy}" x2="${W-P.r}" y2="${gy}" stroke="#ff9900" stroke-width="2" stroke-dasharray="6,4" style="filter:drop-shadow(0 0 3px #ff990088)"/>`;
-    svg+=`<text x="${W-P.r}" y="${gy-6}" text-anchor="end" font-size="11" font-weight="700" fill="#ff9900">🎯 Meta ${fmt(meta.goal,meta.type)}</text>`; }
+    const ly = gy < P.t+16 ? gy+15 : gy-7;
+    svg+=`<text x="${P.l+4}" y="${ly}" text-anchor="start" font-size="11" font-weight="700" fill="#ff9900">🎯 Meta ${fmt(meta.goal,meta.type)}</text>`; }
   svg+=`</svg>`; return svg;
 }
 
