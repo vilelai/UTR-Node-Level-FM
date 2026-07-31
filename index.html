@@ -65,6 +65,15 @@
   .dg { background:#1a7f37; } .dy { background:#e0a800; } .dr { background:#c0392b; } .dn { background:#d5dbdb; }
   svg text { font-family:"Segoe UI",Arial,sans-serif; }
   .chartwrap { width:100%; overflow-x:auto; }
+  .chart-row { display:flex; gap:16px; align-items:center; flex-wrap:wrap; }
+  .chart-row .chartwrap { flex:1 1 300px; min-width:0; }
+  .analysis { flex:0 0 240px; background:#f7f9fb; border-left:3px solid #ff9900; border-radius:6px; padding:12px 14px; font-size:12.5px; color:#37475a; line-height:1.5; }
+  .analysis h4 { font-size:11px; text-transform:uppercase; letter-spacing:.5px; color:#879596; margin-bottom:8px; }
+  .analysis ul { margin:0; padding-left:15px; }
+  .analysis li { margin-bottom:6px; }
+  .analysis b { color:#16191f; }
+  .analysis .ok { color:#1a7f37; font-weight:700; }
+  .analysis .bad { color:#c0392b; font-weight:700; }
   .panel.dark { background:linear-gradient(155deg,#0d1424 0%,#141d31 60%,#0f1830 100%); color:#e6eef8; box-shadow:0 6px 24px rgba(0,0,0,.28), inset 0 0 0 1px rgba(120,170,255,.10); }
   .panel.dark h2 { color:#eaf1fb; }
   .panel.dark .muted { color:#8aa2c8; }
@@ -88,7 +97,7 @@
 <body>
 <header>
   <h1><span class="logo">amazon</span> &nbsp;UTR Node LVL &middot; First Mile Brasil</h1>
-  <span class="gen">Atualizado: 31/07/2026 10:35</span>
+  <span class="gen">Atualizado: 31/07/2026 10:43</span>
 </header>
 
 <div class="bar">
@@ -191,16 +200,25 @@
     <div class="grid2">
       <div class="panel">
         <h2><span class="badge best">TOP 10</span> Melhores <span class="muted" id="rbTitle"></span></h2>
-        <div class="chartwrap"><div id="rankBest"></div></div>
+        <div class="chart-row">
+          <div class="chartwrap"><div id="rankBest"></div></div>
+          <div class="analysis" id="rankBestNote"></div>
+        </div>
       </div>
       <div class="panel">
         <h2><span class="badge worst">TOP 10</span> Piores <span class="muted" id="rwTitle"></span></h2>
-        <div class="chartwrap"><div id="rankWorst"></div></div>
+        <div class="chart-row">
+          <div class="chartwrap"><div id="rankWorst"></div></div>
+          <div class="analysis" id="rankWorstNote"></div>
+        </div>
       </div>
     </div>
     <div class="panel">
       <h2>Média por Regional <span class="muted" id="regMetric"></span></h2>
-      <div class="chartwrap"><div id="regChart"></div></div>
+      <div class="chart-row">
+        <div class="chartwrap"><div id="regChart"></div></div>
+        <div class="analysis" id="regNote"></div>
+      </div>
     </div>
     <div class="panel">
       <h2>Tabela Ranking Nodes <span class="muted">(tendência das últimas semanas + status)</span></h2>
@@ -579,6 +597,38 @@ function renderTrend(metric,meta){
   }).join('')||'<tr><td class="muted">Sem dados</td></tr>';
 }
 
+function meetsGoal(v, meta){ if(meta.goal==null||v==null||isNaN(v)) return null; return meta.hib? v>=meta.goal : v<=meta.goal; }
+function goalTxt(meta){ return meta.goal!=null? fmt(meta.goal,meta.type) : '—'; }
+function noteBest(all, meta, metric){
+  if(!all.length) return '<h4>Análise</h4><div class="muted">Sem dados.</div>';
+  const n=all.length, top=all[0];
+  const vals=all.map(a=>a.m[metric]); const media=vals.reduce((s,v)=>s+v,0)/n;
+  const meet = meta.goal!=null? all.filter(a=>meetsGoal(a.m[metric],meta)).length : null;
+  let li=`<li>Destaque: <b>${top.node}</b> ${top.regional?('('+top.regional+')'):''} com <span class="ok">${fmt(top.m[metric],meta.type)}</span></li>`;
+  li+=`<li>Média dos nodes: <b>${fmt(media,meta.type)}</b></li>`;
+  if(meet!=null) li+=`<li><span class="ok">${meet}</span> de ${n} dentro da meta (${goalTxt(meta)})</li>`;
+  return `<h4>Análise · ${metric}</h4><ul>${li}</ul>`;
+}
+function noteWorst(all, meta, metric){
+  if(!all.length) return '<h4>Análise</h4><div class="muted">Sem dados.</div>';
+  const n=all.length, worst=all[all.length-1];
+  const below = meta.goal!=null? all.filter(a=>meetsGoal(a.m[metric],meta)===false).length : null;
+  let li=`<li>Atenção: <b>${worst.node}</b> ${worst.regional?('('+worst.regional+')'):''} com <span class="bad">${fmt(worst.m[metric],meta.type)}</span></li>`;
+  if(meta.goal!=null){ const gap=meta.hib? (meta.goal-worst.m[metric]) : (worst.m[metric]-meta.goal);
+    li+=`<li>Gap do pior p/ meta: <b>${fmt(Math.abs(gap),meta.type)}</b></li>`; }
+  if(below!=null) li+=`<li><span class="bad">${below}</span> de ${n} fora da meta (${goalTxt(meta)})</li>`;
+  return `<h4>Foco de melhoria</h4><ul>${li}</ul>`;
+}
+function noteRegional(items, meta){
+  if(!items.length) return '<h4>Análise</h4><div class="muted">Sem dados.</div>';
+  const best=items[0], worst=items[items.length-1];
+  const above = meta.goal!=null? items.filter(i=>meetsGoal(i.v,meta)).length : null;
+  let li=`<li>Melhor: <b>${best.k}</b> (<span class="ok">${fmt(best.v,meta.type)}</span>)</li>`;
+  li+=`<li>Pior: <b>${worst.k}</b> (<span class="bad">${fmt(worst.v,meta.type)}</span>)</li>`;
+  if(above!=null) li+=`<li><b>${above}</b> de ${items.length} regionais dentro da meta</li>`;
+  return `<h4>Análise regional</h4><ul>${li}</ul>`;
+}
+
 function renderRanking(metric,meta){
   $('regMetric').textContent='· '+metric;
   const periodSel=periodSelected();
@@ -597,12 +647,15 @@ function renderRanking(metric,meta){
   $('rbTitle').textContent='· '+metric; $('rwTitle').textContent='· '+metric;
   $('rankBest').innerHTML=colBarChart(best, meta);
   $('rankWorst').innerHTML=colBarChart(worst, meta);
+  $('rankBestNote').innerHTML=noteBest(byMetric, meta, metric);
+  $('rankWorstNote').innerHTML=noteWorst(byMetric, meta, metric);
 
   // barras por regional
   const rmap=aggByKey(rows, d=>d.regional, metric, meta.type);
   let regItems=Object.keys(rmap).map(k=>({k, v:avg(rmap[k])})).filter(i=>i.v!==null);
   regItems.sort((a,b)=> meta.hib? b.v-a.v : a.v-b.v);
   $('regChart').innerHTML=colBarChart(regItems, meta);
+  $('regNote').innerHTML=noteRegional(regItems, meta);
 
   // ranking nodes com trend das ultimas semanas
   const semanas=sortLabels(uniq(rows.map(d=>d.semana)),'semana');
