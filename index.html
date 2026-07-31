@@ -74,6 +74,12 @@
   .analysis b { color:#16191f; }
   .analysis .ok { color:#1a7f37; font-weight:700; }
   .analysis .bad { color:#c0392b; font-weight:700; }
+  .chart-row.wide-note .chartwrap { flex:0 1 auto; }
+  .chart-row.wide-note .analysis { flex:1 1 320px; }
+  .analysis .kpis { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px; }
+  .analysis .kpi { background:#fff; border:1px solid #e6ebf1; border-radius:6px; padding:8px 12px; flex:1 1 90px; }
+  .analysis .kpi .kl { font-size:10px; color:#879596; text-transform:uppercase; letter-spacing:.4px; }
+  .analysis .kpi .kv { font-size:18px; font-weight:700; color:#16191f; }
   .panel.dark { background:linear-gradient(155deg,#0d1424 0%,#141d31 60%,#0f1830 100%); color:#e6eef8; box-shadow:0 6px 24px rgba(0,0,0,.28), inset 0 0 0 1px rgba(120,170,255,.10); }
   .panel.dark h2 { color:#eaf1fb; }
   .panel.dark .muted { color:#8aa2c8; }
@@ -97,7 +103,7 @@
 <body>
 <header>
   <h1><span class="logo">amazon</span> &nbsp;UTR Node LVL &middot; First Mile Brasil</h1>
-  <span class="gen">Atualizado: 31/07/2026 10:47</span>
+  <span class="gen">Atualizado: 31/07/2026 10:51</span>
 </header>
 
 <div class="bar">
@@ -215,7 +221,7 @@
     </div>
     <div class="panel">
       <h2>Média por Regional <span class="muted" id="regMetric"></span></h2>
-      <div class="chart-row">
+      <div class="chart-row wide-note">
         <div class="chartwrap"><div id="regChart"></div></div>
         <div class="analysis" id="regNote"></div>
       </div>
@@ -620,14 +626,28 @@ function noteWorst(all, meta, metric){
   if(below!=null) li+=`<li><span class="bad">${below}</span> de ${n} fora da meta (${goalTxt(meta)})</li>`;
   return `<h4>Foco de melhoria</h4><ul>${li}</ul>`;
 }
-function noteRegional(items, meta){
+function noteRegional(items, meta, cntByReg, belowByReg){
   if(!items.length) return '<h4>Análise</h4><div class="muted">Sem dados.</div>';
   const best=items[0], worst=items[items.length-1];
+  const vals=items.map(i=>i.v); const media=vals.reduce((s,v)=>s+v,0)/items.length;
+  const amp=Math.abs(best.v-worst.v);
   const above = meta.goal!=null? items.filter(i=>meetsGoal(i.v,meta)).length : null;
+  // regional com mais nodes fora da meta
+  let piorReg=null, piorN=0;
+  if(belowByReg) for(const k in belowByReg){ if(belowByReg[k]>piorN){ piorN=belowByReg[k]; piorReg=k; } }
+  const totBelow = belowByReg? Object.values(belowByReg).reduce((s,v)=>s+v,0) : 0;
+
+  let kpis=`<div class="kpis">`
+    + `<div class="kpi"><div class="kl">Média regionais</div><div class="kv">${fmt(media,meta.type)}</div></div>`
+    + `<div class="kpi"><div class="kl">Amplitude</div><div class="kv">${fmt(amp,meta.type)}</div></div>`;
+  if(above!=null) kpis+=`<div class="kpi"><div class="kl">Na meta</div><div class="kv">${above}/${items.length}</div></div>`;
+  kpis+=`</div>`;
+
   let li=`<li>Melhor: <b>${best.k}</b> (<span class="ok">${fmt(best.v,meta.type)}</span>)</li>`;
   li+=`<li>Pior: <b>${worst.k}</b> (<span class="bad">${fmt(worst.v,meta.type)}</span>)</li>`;
-  if(above!=null) li+=`<li><b>${above}</b> de ${items.length} regionais dentro da meta</li>`;
-  return `<h4>Análise regional</h4><ul>${li}</ul>`;
+  if(piorReg) li+=`<li>Mais nodes fora da meta: <b>${piorReg}</b> (<span class="bad">${piorN}</span> nodes)</li>`;
+  if(belowByReg) li+=`<li>Total de nodes fora da meta: <b>${totBelow}</b></li>`;
+  return `<h4>Análise regional · meta ${goalTxt(meta)}</h4>${kpis}<ul>${li}</ul>`;
 }
 
 function renderRanking(metric,meta){
@@ -656,7 +676,12 @@ function renderRanking(metric,meta){
   let regItems=Object.keys(rmap).map(k=>({k, v:avg(rmap[k])})).filter(i=>i.v!==null);
   regItems.sort((a,b)=> meta.hib? b.v-a.v : a.v-b.v);
   $('regChart').innerHTML=colBarChart(regItems, meta);
-  $('regNote').innerHTML=noteRegional(regItems, meta);
+  // stats de nodes por regional (para a analise)
+  const cntByReg={}, belowByReg={};
+  aggN.forEach(a=>{ const v=a.m[metric]; if(v==null||isNaN(v)) return;
+    cntByReg[a.regional]=(cntByReg[a.regional]||0)+1;
+    if(meetsGoal(v,meta)===false) belowByReg[a.regional]=(belowByReg[a.regional]||0)+1; });
+  $('regNote').innerHTML=noteRegional(regItems, meta, cntByReg, belowByReg);
 
   // ranking nodes com trend das ultimas semanas
   const semanas=sortLabels(uniq(rows.map(d=>d.semana)),'semana');
