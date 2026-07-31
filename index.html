@@ -88,7 +88,7 @@
 <body>
 <header>
   <h1><span class="logo">amazon</span> &nbsp;UTR Node LVL &middot; First Mile Brasil</h1>
-  <span class="gen">Atualizado: 31/07/2026 10:26</span>
+  <span class="gen">Atualizado: 31/07/2026 10:30</span>
 </header>
 
 <div class="bar">
@@ -374,17 +374,17 @@ function dotClass(v, meta){
 // defs de gradiente/glow reutilizaveis nos SVGs
 function svgDefs(){
   return `<defs>
-    <linearGradient id="gGood" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#0c5f2e"/><stop offset="1" stop-color="#31e07a"/></linearGradient>
-    <linearGradient id="gWarn" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#7a5c00"/><stop offset="1" stop-color="#ffd23f"/></linearGradient>
-    <linearGradient id="gBad" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#7a1524"/><stop offset="1" stop-color="#ff6072"/></linearGradient>
-    <linearGradient id="gNeu" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#0a3a63"/><stop offset="1" stop-color="#37b0ff"/></linearGradient>
-    <linearGradient id="gLine" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#37b0ff"/><stop offset="1" stop-color="#7a5bff"/></linearGradient>
-    <linearGradient id="gArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#37b0ff" stop-opacity="0.35"/><stop offset="1" stop-color="#37b0ff" stop-opacity="0"/></linearGradient>
+    <linearGradient id="gGood" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#3a7d5d"/><stop offset="1" stop-color="#8bc4a3"/></linearGradient>
+    <linearGradient id="gWarn" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#b08a3e"/><stop offset="1" stop-color="#e3c680"/></linearGradient>
+    <linearGradient id="gBad" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#a85a55"/><stop offset="1" stop-color="#dda19c"/></linearGradient>
+    <linearGradient id="gNeu" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#2a6591"/><stop offset="1" stop-color="#7ba9cf"/></linearGradient>
+    <linearGradient id="gLine" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#146eb4"/><stop offset="1" stop-color="#5a7fc0"/></linearGradient>
+    <linearGradient id="gArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#146eb4" stop-opacity="0.22"/><stop offset="1" stop-color="#146eb4" stop-opacity="0"/></linearGradient>
     <filter id="glow" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
   </defs>`;
 }
 function gradFor(cls){ return cls==='dg'?'url(#gGood)':cls==='dy'?'url(#gWarn)':cls==='dr'?'url(#gBad)':'url(#gNeu)'; }
-function glowFor(cls){ return cls==='dg'?'#31e07a':cls==='dy'?'#ffd23f':cls==='dr'?'#ff6072':'#37b0ff'; }
+function glowFor(cls){ return cls==='dg'?'#8bc4a3':cls==='dy'?'#e3c680':cls==='dr'?'#dda19c':'#7ba9cf'; }
 
 // ---------- SVG COLUMN CHART (barras verticais + linha de meta) ----------
 function colBarChart(items, meta){
@@ -407,7 +407,7 @@ function colBarChart(items, meta){
   // colunas com gradiente + animacao de subida
   items.forEach((it,i)=>{ const c=dotClass(it.v,meta); const glow=glowFor(c);
     const bx=x(i), by=y(it.v), bh=(P.t+ih)-by; const base=P.t+ih;
-    svg+=`<rect x="${bx}" y="${base}" width="${colW}" height="0" rx="7" fill="${gradFor(c)}" style="filter:drop-shadow(0 0 6px ${glow}55)">`
+    svg+=`<rect x="${bx}" y="${base}" width="${colW}" height="0" rx="7" fill="${gradFor(c)}" style="filter:drop-shadow(0 0 3px ${glow}44)">`
       +`<animate attributeName="height" from="0" to="${bh}" dur="0.8s" begin="${i*0.08}s" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.22 1 0.36 1"/>`
       +`<animate attributeName="y" from="${base}" to="${by}" dur="0.8s" begin="${i*0.08}s" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.22 1 0.36 1"/></rect>`;
     svg+=`<text x="${bx+colW/2}" y="${by-9}" text-anchor="middle" font-size="12" font-weight="700" fill="#16191f">${fmt(it.v,meta.type)}</text>`;
@@ -502,8 +502,8 @@ function rankBar(items, meta){
     svg+=`<text x="${P.l-8}" y="${cy+rowH/2+4}" text-anchor="end" font-size="12" font-weight="700" fill="#16191f">${it.k}</text>`;
     // trilho
     svg+=`<rect x="${P.l}" y="${by}" width="${bw}" height="${bh}" rx="${bh/2}" fill="rgba(20,25,31,.06)"/>`;
-    // barra com gradiente + glow + animacao
-    svg+=`<rect x="${P.l}" y="${by}" width="0" height="${bh}" rx="${bh/2}" fill="${gradFor(c)}" style="filter:drop-shadow(0 0 4px ${glow}66)">`
+    // barra com gradiente + glow suave + animacao
+    svg+=`<rect x="${P.l}" y="${by}" width="0" height="${bh}" rx="${bh/2}" fill="${gradFor(c)}" style="filter:drop-shadow(0 0 2px ${glow}44)">`
       + `<animate attributeName="width" from="0" to="${w}" dur="0.7s" begin="${i*0.04}s" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.22 1 0.36 1"/></rect>`;
     // ponta luminosa
     svg+=`<circle cx="${bx}" cy="${by+bh/2}" r="0" fill="${glow}" style="filter:drop-shadow(0 0 3px ${glow})"><animate attributeName="r" from="0" to="3" dur="0.5s" begin="${0.5+i*0.04}s" fill="freeze"/></circle>`;
