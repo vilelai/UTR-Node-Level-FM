@@ -88,7 +88,7 @@
 <body>
 <header>
   <h1><span class="logo">amazon</span> &nbsp;UTR Node LVL &middot; First Mile Brasil</h1>
-  <span class="gen">Atualizado: 31/07/2026 10:19</span>
+  <span class="gen">Atualizado: 31/07/2026 10:26</span>
 </header>
 
 <div class="bar">
@@ -386,6 +386,39 @@ function svgDefs(){
 function gradFor(cls){ return cls==='dg'?'url(#gGood)':cls==='dy'?'url(#gWarn)':cls==='dr'?'url(#gBad)':'url(#gNeu)'; }
 function glowFor(cls){ return cls==='dg'?'#31e07a':cls==='dy'?'#ffd23f':cls==='dr'?'#ff6072':'#37b0ff'; }
 
+// ---------- SVG COLUMN CHART (barras verticais + linha de meta) ----------
+function colBarChart(items, meta){
+  if(!items.length) return '<div class="muted">Sem dados.</div>';
+  const n=items.length, colW=66, gap=58, P={t:26,r:28,b:46,l:58};
+  const W=P.l+P.r + n*colW + n*gap, H=330, ih=H-P.t-P.b;
+  const vals=items.map(i=>i.v);
+  let mn=Math.min(...vals), mx=Math.max(...vals);
+  if(meta.goal!==null){ mn=Math.min(mn,meta.goal); mx=Math.max(mx,meta.goal); }
+  const span=(mx-mn)||Math.abs(mx)||1; mn=Math.max(0, mn-span*0.15); mx=mx+span*0.18;
+  if(meta.type==='pct') mx=Math.min(1.02, mx);
+  if(mx<=mn) mx=mn+(meta.type==='pct'?0.01:1);
+  const x=i=> P.l + gap/2 + i*(colW+gap);
+  const y=v=> P.t + ih - (v-mn)/(mx-mn)*ih;
+  let svg=`<svg width="${W}" height="${H}">`+svgDefs();
+  // grid + eixo
+  for(let g=0; g<=4; g++){ const gv=mn+(mx-mn)*g/4; const gy=y(gv);
+    svg+=`<line x1="${P.l}" y1="${gy}" x2="${W-P.r}" y2="${gy}" stroke="#eef1f5"/>`;
+    svg+=`<text x="${P.l-8}" y="${gy+4}" text-anchor="end" font-size="10" fill="#879596">${fmt(gv,meta.type)}</text>`; }
+  // colunas com gradiente + animacao de subida
+  items.forEach((it,i)=>{ const c=dotClass(it.v,meta); const glow=glowFor(c);
+    const bx=x(i), by=y(it.v), bh=(P.t+ih)-by; const base=P.t+ih;
+    svg+=`<rect x="${bx}" y="${base}" width="${colW}" height="0" rx="7" fill="${gradFor(c)}" style="filter:drop-shadow(0 0 6px ${glow}55)">`
+      +`<animate attributeName="height" from="0" to="${bh}" dur="0.8s" begin="${i*0.08}s" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.22 1 0.36 1"/>`
+      +`<animate attributeName="y" from="${base}" to="${by}" dur="0.8s" begin="${i*0.08}s" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.22 1 0.36 1"/></rect>`;
+    svg+=`<text x="${bx+colW/2}" y="${by-9}" text-anchor="middle" font-size="12" font-weight="700" fill="#16191f">${fmt(it.v,meta.type)}</text>`;
+    svg+=`<text x="${bx+colW/2}" y="${H-P.b+20}" text-anchor="middle" font-size="12" font-weight="600" fill="#37475a">${it.k}</text>`; });
+  // linha de meta (target) atravessando
+  if(meta.goal!==null && meta.goal>=mn && meta.goal<=mx){ const gy=y(meta.goal);
+    svg+=`<line x1="${P.l}" y1="${gy}" x2="${W-P.r}" y2="${gy}" stroke="#ff9900" stroke-width="2" stroke-dasharray="6,4" style="filter:drop-shadow(0 0 3px #ff990088)"/>`;
+    svg+=`<text x="${W-P.r}" y="${gy-6}" text-anchor="end" font-size="11" font-weight="700" fill="#ff9900">🎯 Meta ${fmt(meta.goal,meta.type)}</text>`; }
+  svg+=`</svg>`; return svg;
+}
+
 // ---------- SVG LINE CHART ----------
 function lineChart(series, meta){
   const W=Math.max(760, series.length*46), H=300, P={t:20,r:20,b:40,l:50};
@@ -569,7 +602,7 @@ function renderRanking(metric,meta){
   const rmap=aggByKey(rows, d=>d.regional, metric, meta.type);
   let regItems=Object.keys(rmap).map(k=>({k, v:avg(rmap[k])})).filter(i=>i.v!==null);
   regItems.sort((a,b)=> meta.hib? b.v-a.v : a.v-b.v);
-  $('regChart').innerHTML=hbarChart(regItems, meta);
+  $('regChart').innerHTML=colBarChart(regItems, meta);
 
   // ranking nodes com trend das ultimas semanas
   const semanas=sortLabels(uniq(rows.map(d=>d.semana)),'semana');
