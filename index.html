@@ -100,7 +100,7 @@
 <body>
 <header>
   <h1><span class="logo">amazon</span> &nbsp;UTR Node LVL &middot; First Mile Brasil</h1>
-  <span class="gen">Atualizado: 05/08/2026 16:40</span>
+  <span class="gen">Atualizado: 05/08/2026 17:24</span>
 </header>
 
 <div class="bar">
@@ -597,7 +597,7 @@ function renderOverview(metric,meta){
 function renderTrend(metric,meta){
   const fn=FILTERS['node']; const scope = fn && fn.size? ` · nodes: ${[...fn].join(', ')}` : ' · todos os nodes';
   $('trendMetric').textContent='· '+metric+scope;
-  const rows=applyFilters({ignoreSemana:true}); // respeita Mes; ignora Semana p/ ver a serie
+  const rows=applyFilters(); // respeita Mes E Semana; sem selecao = serie inteira
   const keyFn = GRAN==='semana'? (d=>d.semana) : (GRAN==='mes'? (d=>d.mes) : (d=>d.period));
   const map=weightedByKey(rows, keyFn, metric, meta.type);
   const labels=sortLabels(Object.keys(map), GRAN);
