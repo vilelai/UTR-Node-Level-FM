@@ -100,7 +100,7 @@
 <body>
 <header>
   <h1><span class="logo">amazon</span> &nbsp;UTR Node LVL &middot; First Mile Brasil</h1>
-  <span class="gen">Atualizado: 12/08/2026 16:45</span>
+  <span class="gen">Atualizado: 12/08/2026 16:49</span>
 </header>
 
 <div class="bar">
@@ -347,9 +347,9 @@ function buildMulti(mountId, name, values, sortKey, withSearch, labelFn){
     updateBtn(); render();
   }));
   updateBtn();
-  MULTI.push({reset:()=>{ FILTERS[name].clear(); panel.querySelectorAll('input[value]').forEach(x=>x.checked=false);
+  MULTI.push({name:name, reset:()=>{ FILTERS[name].clear(); panel.querySelectorAll('input[value]').forEach(x=>x.checked=false);
     const sc=panel.querySelector('.ms-search'); if(sc){ sc.value=''; panel.querySelectorAll('label[data-v]').forEach(l=>l.style.display='block'); }
-    updateBtn(); }});
+    updateBtn(); , setOnly:(val)=>{ FILTERS[name].clear(); FILTERS[name].add(String(val)); panel.querySelectorAll('input[value]').forEach(x=>x.checked=(x.value===String(val))); updateBtn(); }});
 }
 buildMulti('msRegional','regional', uniq(DATA.map(d=>d.regional)));
 buildMulti('msDef','def', uniq(DATA.map(d=>d.def)));
@@ -738,33 +738,17 @@ function renderRanking(metric,meta){
 let SELECTED_CARRIER = null;
 
 function drillCarrier(carrierName, metric, meta) {
+  // Apply partner filter globally via the multiselect
   SELECTED_CARRIER = carrierName;
-  const panel = document.getElementById('carrierDrillPanel');
-  panel.style.display = 'block';
-  document.getElementById('carrierDrillBadge').textContent = carrierName;
-  document.getElementById('carrierDrillName').textContent = carrierName;
-  document.getElementById('carrierDrillMetric').textContent = '\u00b7 ' + metric;
-
-  const periodSel = periodSelected();
-  let rows = applyFilters().filter(d => d.partner === carrierName);
-  if (!periodSel && CUTOFF15) rows = rows.filter(d => d.period && d.period >= CUTOFF15);
-
-  // Agrupar por node
-  const nmap = weightedByKey(rows, d => d.node, metric, meta.type);
-  let nItems = Object.keys(nmap).map(k => ({k, v: nmap[k]})).filter(i => i.v !== null);
-  nItems.sort((a, b) => meta.hib ? b.v - a.v : a.v - b.v);
-
-  document.getElementById('carrierDrillChart').innerHTML = colBarChart(nItems, meta);
-
-  // Nota
-  let noteHtml = '<h4>' + carrierName + ' \u2014 ' + nItems.length + ' nodes</h4><ul>';
-  nItems.forEach(it => {
-    const cls = pillClass(it.v, meta);
-    const icon = cls === 'g' ? '\u2705' : (cls === 'r' ? '\u274c' : '\u26a0\ufe0f');
-    noteHtml += '<li>' + icon + ' <b>' + it.k + '</b>: ' + fmt(it.v, meta.type) + '</li>';
-  });
-  noteHtml += '</ul>';
-  document.getElementById('carrierDrillNote').innerHTML = noteHtml;
+  // Find the partner multiselect and set it to this carrier
+  const ms = MULTI.find(m => m.name === 'partner');
+  if (ms) {
+    ms.setOnly(carrierName);
+  } else {
+    // fallback: set FILTERS directly
+    FILTERS['partner'] = new Set([carrierName]);
+  }
+  render();
 }
 
 function renderCarrier(metric,meta){
@@ -773,7 +757,7 @@ function renderCarrier(metric,meta){
   let rows=applyFilters();
   if(!periodSel && CUTOFF15) rows=rows.filter(d=> d.period && d.period>=CUTOFF15);
   $('carrierScope').textContent = '\u00b7 '+metric+' \u00b7 '+periodScopeText();
-  document.getElementById('carrierDrillPanel').style.display='none'; SELECTED_CARRIER=null;
+  SELECTED_CARRIER=null;
   document.querySelectorAll('#carrierMetricSeg button').forEach(b=> b.classList.toggle('active', b.dataset.m===metric));
 
   // Barras por carrier
@@ -810,6 +794,30 @@ function renderCarrier(metric,meta){
   });
   noteHtml+='</ul>';
   $('carrierNote').innerHTML=noteHtml;
+
+  // Drill-down: se um carrier esta selecionado via filtro, mostrar grafico de nodes
+  const selPartner = FILTERS['partner'] && FILTERS['partner'].size===1 ? [...FILTERS['partner']][0] : null;
+  const drillPanel = document.getElementById('carrierDrillPanel');
+  if(selPartner && drillPanel){
+    drillPanel.style.display='block';
+    document.getElementById('carrierDrillBadge').textContent=selPartner;
+    document.getElementById('carrierDrillName').textContent=selPartner;
+    document.getElementById('carrierDrillMetric').textContent='\u00b7 '+metric;
+    const nmap2=weightedByKey(rows, d=>d.node, metric, meta.type);
+    let nItems2=Object.keys(nmap2).map(k=>({k, v:nmap2[k]})).filter(i=>i.v!==null);
+    nItems2.sort((a,b)=> meta.hib? b.v-a.v : a.v-b.v);
+    document.getElementById('carrierDrillChart').innerHTML=colBarChart(nItems2, meta);
+    let nh2='<h4>'+selPartner+' \u2014 '+nItems2.length+' nodes</h4><ul>';
+    nItems2.forEach(it=>{
+      const cls2=pillClass(it.v,meta);
+      const ic2=cls2==='g'?'\u2705':(cls2==='r'?'\u274c':'\u26a0\ufe0f');
+      nh2+='<li>'+ic2+' <b>'+it.k+'</b>: '+fmt(it.v,meta.type)+'</li>';
+    });
+    nh2+='</ul>';
+    document.getElementById('carrierDrillNote').innerHTML=nh2;
+  } else if(drillPanel) {
+    drillPanel.style.display='none';
+  }
 
   // Tabela detalhada: nodes agrupados por carrier
   const aggN=aggByNode(rows).filter(a=>a.m[metric]!==null&&!isNaN(a.m[metric]));
