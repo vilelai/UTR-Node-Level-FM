@@ -100,7 +100,7 @@
 <body>
 <header>
   <h1><span class="logo">amazon</span> &nbsp;UTR Node LVL &middot; First Mile Brasil</h1>
-  <span class="gen">Atualizado: 12/08/2026 16:27</span>
+  <span class="gen">Atualizado: 12/08/2026 16:40</span>
 </header>
 
 <div class="bar">
@@ -118,6 +118,7 @@
   <div class="tab active" data-view="overview">Visão Geral</div>
   <div class="tab" data-view="trend">Tendência &amp; Continuidade</div>
   <div class="tab" data-view="ranking">Ranking &amp; Regional</div>
+  <div class="tab" data-view="carrier">Ranking &amp; Carrier</div>
 </div>
 
 <div class="wrap">
@@ -233,6 +234,35 @@
   </div>
 </div>
 
+  <!-- CARRIER -->
+  <div class="view" id="v-carrier">
+    <div class="panel">
+      <h2 style="justify-content:space-between">
+        <span>Ranking por Carrier/Partner <span class="muted" id="carrierScope"></span></span>
+        <span class="seg" id="carrierMetricSeg">
+          <button data-m="Receive Success">Receive</button>
+          <button data-m="Stow Success">Stow</button>
+          <button data-m="Depart Success">Depart</button>
+          <button data-m="Missort DPMO">DPMO</button>
+          <button data-m="OTD">OTD</button>
+        </span>
+      </h2>
+    </div>
+    <div class="panel">
+      <h2>M\u00e9dia por Carrier <span class="muted" id="carrierChartTitle"></span></h2>
+      <div class="chart-row">
+        <div class="chartwrap"><div id="carrierChart"></div></div>
+        <div class="analysis" id="carrierNote"></div>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Nodes por Carrier <span class="muted" id="carrierDetailTitle"></span></h2>
+      <div class="tablewrap">
+        <table id="carrierTbl"><thead><tr id="carrierHead"></tr></thead><tbody id="carrierBody"></tbody></table>
+      </div>
+    </div>
+  </div>
+
 <div class="foot">
   <b>Metodologia:</b> médias <b>ponderadas por volume</b> — Receive por <i>Picked up</i>; Stow/Depart/Missort por <i>Processed (3. Share)</i>. Fins de semana, feriados sem operação e dias sem volume são excluídos.
   <br>
@@ -344,6 +374,9 @@ document.querySelectorAll('#granSeg button').forEach(b=> b.addEventListener('cli
 }));
 // botoes rapidos de metrica no ranking
 document.querySelectorAll('#rankMetricSeg button').forEach(b=> b.addEventListener('click', ()=>{
+  $('fMetric').value=b.dataset.m; render();
+}));
+document.querySelectorAll('#carrierMetricSeg button').forEach(b=> b.addEventListener('click', ()=>{
   $('fMetric').value=b.dataset.m; render();
 }));
 
@@ -561,6 +594,7 @@ function render(){
   if(active==='overview') renderOverview(metric,meta);
   if(active==='trend') renderTrend(metric,meta);
   if(active==='ranking') renderRanking(metric,meta);
+  renderCarrier(metric,meta);
 }
 
 function renderOverview(metric,meta){
@@ -690,6 +724,46 @@ function renderRanking(metric,meta){
     const st=dotClass(a.m[metric],meta);
     return `<tr><td class="rank">${i+1}</td><td>${a.node}</td><td class="muted">${a.regional||''}</td><td class="num"><span class="pill ${pillClass(a.m[metric],meta)}">${fmt(a.m[metric],meta.type)}</span></td>${dots}<td><span class="dot ${st}"></span></td></tr>`;
   }).join('')||'<tr><td class="muted">Sem dados</td></tr>';
+}
+
+
+function renderCarrier(metric,meta){
+  $('carrierChartTitle').textContent='\u00b7 '+metric;
+  const periodSel=periodSelected();
+  let rows=applyFilters();
+  if(!periodSel && CUTOFF15) rows=rows.filter(d=> d.period && d.period>=CUTOFF15);
+  $('carrierScope').textContent = '\u00b7 '+metric+' \u00b7 '+periodScopeText();
+  document.querySelectorAll('#carrierMetricSeg button').forEach(b=> b.classList.toggle('active', b.dataset.m===metric));
+
+  // Barras por carrier
+  const cmap=weightedByKey(rows, d=>d.partner, metric, meta.type);
+  let cItems=Object.keys(cmap).filter(k=>k&&k!=='null'&&k!=='Desconhecido').map(k=>({k, v:cmap[k]})).filter(i=>i.v!==null);
+  cItems.sort((a,b)=> meta.hib? b.v-a.v : a.v-b.v);
+  $('carrierChart').innerHTML=colBarChart(cItems, meta);
+
+  // Nota de analise
+  let noteHtml='<h4>An\u00e1lise por Carrier</h4><ul>';
+  cItems.forEach(it=>{
+    const cls=pillClass(it.v,meta);
+    const icon=cls==='g'?'\u2705':(cls==='r'?'\u274c':'\u26a0\ufe0f');
+    noteHtml+=`<li>${icon} <b>${it.k}</b>: ${fmt(it.v,meta.type)}</li>`;
+  });
+  noteHtml+='</ul>';
+  $('carrierNote').innerHTML=noteHtml;
+
+  // Tabela detalhada: nodes agrupados por carrier
+  const aggN=aggByNode(rows).filter(a=>a.m[metric]!==null&&!isNaN(a.m[metric]));
+  aggN.sort((a,b)=> {
+    if(a.partner!==b.partner) return (a.partner||'').localeCompare(b.partner||'');
+    return meta.hib? b.m[metric]-a.m[metric] : a.m[metric]-b.m[metric];
+  });
+  $('carrierHead').innerHTML='<th>Carrier</th><th>Node</th><th>Regional</th><th>Tipo</th><th class="num">'+metric+'</th><th class="num">Vol</th><th>Status</th>';
+  $('carrierBody').innerHTML=aggN.map(a=>{
+    const st=dotClass(a.m[metric],meta);
+    const vol=a.m['Picked Up (vol)'];
+    return `<tr><td><b>${a.partner||'?'}</b></td><td>${a.node}</td><td class="muted">${a.regional||''}</td><td class="muted">${a.def||''}</td><td class="num"><span class="pill ${pillClass(a.m[metric],meta)}">${fmt(a.m[metric],meta.type)}</span></td><td class="num">${vol?Math.round(vol).toLocaleString():'-'}</td><td><span class="dot ${st}"></span></td></tr>`;
+  }).join('')||'<tr><td class="muted">Sem dados</td></tr>';
+  $('carrierDetailTitle').textContent='\u00b7 '+metric+' \u00b7 '+cItems.length+' carriers \u00b7 '+aggN.length+' nodes';
 }
 
 // ---------- MODAL: analise dia a dia por node ----------
