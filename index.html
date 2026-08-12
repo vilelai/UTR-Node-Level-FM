@@ -100,7 +100,7 @@
 <body>
 <header>
   <h1><span class="logo">amazon</span> &nbsp;UTR Node LVL &middot; First Mile Brasil</h1>
-  <span class="gen">Atualizado: 12/08/2026 16:40</span>
+  <span class="gen">Atualizado: 12/08/2026 16:45</span>
 </header>
 
 <div class="bar">
@@ -253,6 +253,13 @@
       <div class="chart-row">
         <div class="chartwrap"><div id="carrierChart"></div></div>
         <div class="analysis" id="carrierNote"></div>
+      </div>
+    </div>
+    <div class="panel" id="carrierDrillPanel" style="display:none">
+      <h2><span class="badge best" id="carrierDrillBadge"></span> Nodes de <span id="carrierDrillName"></span> <span class="muted" id="carrierDrillMetric"></span></h2>
+      <div class="chart-row">
+        <div class="chartwrap"><div id="carrierDrillChart"></div></div>
+        <div class="analysis" id="carrierDrillNote"></div>
       </div>
     </div>
     <div class="panel">
@@ -478,7 +485,7 @@ function colBarChart(items, meta){
   // colunas com gradiente + animacao de subida
   items.forEach((it,i)=>{ const c=dotClass(it.v,meta); const glow=glowFor(c);
     const bx=x(i), by=y(it.v), bh=(P.t+ih)-by; const base=P.t+ih;
-    svg+=`<rect x="${bx}" y="${base}" width="${colW}" height="0" rx="7" fill="${gradFor(c)}" style="filter:drop-shadow(0 0 3px ${glow}44)">`
+    svg+=`<rect data-label="${it.k}" x="${bx}" y="${base}" width="${colW}" height="0" rx="7" fill="${gradFor(c)}" style="filter:drop-shadow(0 0 3px ${glow}44)">`
       +`<animate attributeName="height" from="0" to="${bh}" dur="0.8s" begin="${i*0.08}s" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.22 1 0.36 1"/>`
       +`<animate attributeName="y" from="${base}" to="${by}" dur="0.8s" begin="${i*0.08}s" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.22 1 0.36 1"/></rect>`;
     svg+=`<text x="${bx+colW/2}" y="${Math.max(14, by-9)}" text-anchor="middle" font-size="${many?9.5:12}" font-weight="700" fill="#16191f">${fmt(it.v,meta.type)}</text>`;
@@ -727,12 +734,46 @@ function renderRanking(metric,meta){
 }
 
 
+
+let SELECTED_CARRIER = null;
+
+function drillCarrier(carrierName, metric, meta) {
+  SELECTED_CARRIER = carrierName;
+  const panel = document.getElementById('carrierDrillPanel');
+  panel.style.display = 'block';
+  document.getElementById('carrierDrillBadge').textContent = carrierName;
+  document.getElementById('carrierDrillName').textContent = carrierName;
+  document.getElementById('carrierDrillMetric').textContent = '\u00b7 ' + metric;
+
+  const periodSel = periodSelected();
+  let rows = applyFilters().filter(d => d.partner === carrierName);
+  if (!periodSel && CUTOFF15) rows = rows.filter(d => d.period && d.period >= CUTOFF15);
+
+  // Agrupar por node
+  const nmap = weightedByKey(rows, d => d.node, metric, meta.type);
+  let nItems = Object.keys(nmap).map(k => ({k, v: nmap[k]})).filter(i => i.v !== null);
+  nItems.sort((a, b) => meta.hib ? b.v - a.v : a.v - b.v);
+
+  document.getElementById('carrierDrillChart').innerHTML = colBarChart(nItems, meta);
+
+  // Nota
+  let noteHtml = '<h4>' + carrierName + ' \u2014 ' + nItems.length + ' nodes</h4><ul>';
+  nItems.forEach(it => {
+    const cls = pillClass(it.v, meta);
+    const icon = cls === 'g' ? '\u2705' : (cls === 'r' ? '\u274c' : '\u26a0\ufe0f');
+    noteHtml += '<li>' + icon + ' <b>' + it.k + '</b>: ' + fmt(it.v, meta.type) + '</li>';
+  });
+  noteHtml += '</ul>';
+  document.getElementById('carrierDrillNote').innerHTML = noteHtml;
+}
+
 function renderCarrier(metric,meta){
   $('carrierChartTitle').textContent='\u00b7 '+metric;
   const periodSel=periodSelected();
   let rows=applyFilters();
   if(!periodSel && CUTOFF15) rows=rows.filter(d=> d.period && d.period>=CUTOFF15);
   $('carrierScope').textContent = '\u00b7 '+metric+' \u00b7 '+periodScopeText();
+  document.getElementById('carrierDrillPanel').style.display='none'; SELECTED_CARRIER=null;
   document.querySelectorAll('#carrierMetricSeg button').forEach(b=> b.classList.toggle('active', b.dataset.m===metric));
 
   // Barras por carrier
@@ -740,6 +781,25 @@ function renderCarrier(metric,meta){
   let cItems=Object.keys(cmap).filter(k=>k&&k!=='null'&&k!=='Desconhecido').map(k=>({k, v:cmap[k]})).filter(i=>i.v!==null);
   cItems.sort((a,b)=> meta.hib? b.v-a.v : a.v-b.v);
   $('carrierChart').innerHTML=colBarChart(cItems, meta);
+  // Make carrier bars clickable for drill-down
+  const cSvg = document.getElementById('carrierChart').querySelector('svg');
+  if(cSvg) {
+    cSvg.style.cursor='pointer';
+    const rects = cSvg.querySelectorAll('rect[data-label]');
+    if(rects.length) {
+      rects.forEach(r => r.addEventListener('click', ()=> drillCarrier(r.dataset.label, metric, meta)));
+    } else {
+      // fallback: use text elements as click targets
+      const texts = cSvg.querySelectorAll('text');
+      const labels = cItems.map(i=>i.k);
+      texts.forEach(t => {
+        if(labels.includes(t.textContent)) {
+          t.style.cursor='pointer';
+          t.addEventListener('click', ()=> drillCarrier(t.textContent, metric, meta));
+        }
+      });
+    }
+  }
 
   // Nota de analise
   let noteHtml='<h4>An\u00e1lise por Carrier</h4><ul>';
