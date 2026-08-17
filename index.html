@@ -100,7 +100,7 @@
 <body>
 <header>
   <h1><span class="logo">amazon</span> &nbsp;UTR Node LVL &middot; First Mile Brasil</h1>
-  <span class="gen">Atualizado: 12/08/2026 17:46</span>
+  <span class="gen">Atualizado: 17/08/2026 15:13</span>
 </header>
 
 <div class="bar">
@@ -349,7 +349,7 @@ function buildMulti(mountId, name, values, sortKey, withSearch, labelFn){
   updateBtn();
   MULTI.push({name:name, reset:()=>{ FILTERS[name].clear(); panel.querySelectorAll('input[value]').forEach(x=>x.checked=false);
     const sc=panel.querySelector('.ms-search'); if(sc){ sc.value=''; panel.querySelectorAll('label[data-v]').forEach(l=>l.style.display='block'); }
-    updateBtn(); , setOnly:(val)=>{ FILTERS[name].clear(); FILTERS[name].add(String(val)); panel.querySelectorAll('input[value]').forEach(x=>x.checked=(x.value===String(val))); updateBtn(); }});
+    updateBtn(); }, setOnly:(val)=>{ FILTERS[name].clear(); FILTERS[name].add(String(val)); panel.querySelectorAll('input[value]').forEach(x=>x.checked=(x.value===String(val))); updateBtn(); }});
 }
 buildMulti('msRegional','regional', uniq(DATA.map(d=>d.regional)));
 buildMulti('msDef','def', uniq(DATA.map(d=>d.def)));
