@@ -103,11 +103,11 @@
 <body>
 <header>
   <h1><span class="logo">amazon</span> &nbsp;UTR Node LVL &middot; First Mile Brasil</h1>
-  <span class="gen">Atualizado: 18/08/2026 11:06</span>
+  <span class="gen">Atualizado: 18/08/2026 11:46</span>
 </header>
 
 <div class="bar">
-  <div class="ctrl"><label>Métrica</label><select id="fMetric"></select></div>
+  <div class="ctrl"><label>M&eacute;trica</label><select id="fMetric"></select></div>
   <div class="ctrl"><label>Regional</label><div class="ms" id="msRegional"></div></div>
   <div class="ctrl"><label>Tipo (SPC/PN)</label><div class="ms" id="msDef"></div></div>
   <div class="ctrl"><label>Mês</label><div class="ms" id="msMes"></div></div>
@@ -122,6 +122,7 @@
   <div class="tab" data-view="trend">Tendência &amp; Continuidade</div>
   <div class="tab" data-view="ranking">Ranking &amp; Regional</div>
   <div class="tab" data-view="carrier">Ranking &amp; Carrier</div>
+  <div class="tab" data-view="daily">Daily Nodes</div>
 </div>
 
 <div class="wrap">
@@ -186,7 +187,7 @@
       <div class="chartwrap"><div id="lineChart"></div></div>
     </div>
     <div class="panel">
-      <h2>Visão por Mês &times; Semana <span class="muted">(heatmap · métrica selecionada)</span></h2>
+      <h2>Visão por Mês &times; Semana <span class="muted">(heatmap · m&eacute;trica selecionada)</span></h2>
       <div class="tablewrap"><table id="heat"><thead><tr id="heatHead"></tr></thead><tbody id="heatBody"></tbody></table></div>
     </div>
   </div>
@@ -195,7 +196,7 @@
   <div class="view" id="v-ranking">
     <div class="panel">
       <h2 style="justify-content:space-between">
-        <span>Ranking de Nodes por métrica <span class="muted" id="rankScope"></span></span>
+        <span>Ranking de Nodes por m&eacute;trica <span class="muted" id="rankScope"></span></span>
         <span class="seg" id="rankMetricSeg">
           <button data-m="Receive Success">Receive</button>
           <button data-m="Stow Success">Stow</button>
@@ -222,7 +223,7 @@
       </div>
     </div>
     <div class="panel">
-      <h2>Média por Regional <span class="muted" id="regMetric"></span></h2>
+      <h2>M&eacute;dia por Regional <span class="muted" id="regMetric"></span></h2>
       <div class="chart-row">
         <div class="chartwrap"><div id="regChart"></div></div>
         <div class="analysis" id="regNote"></div>
@@ -272,11 +273,42 @@
       </div>
     </div>
   </div>
+  <!-- DAILY NODES -->
+  <div class="view" id="v-daily">
+    <div class="panel" style="margin-bottom:1rem">
+      <h2>&#128202; Performance por Node — <span id="dailyDate">&uacute;ltimo dia</span></h2>
+      <p class="muted">M&eacute;trica selecionada: <strong id="dailyMetricLabel"></strong> | Target em linha vermelha tracejada | Ordenado do pior &rarr; melhor</p>
+      <div id="dailyBtns" style="margin:0.5rem 0;display:flex;gap:6px;flex-wrap:wrap"></div>
+    </div>
+    <div class="panel">
+      <div style="width:100%;overflow-x:auto"><canvas id="dailyChart" height="420"></canvas></div>
+    </div>
+    <div class="panel">
+      <h3>Resumo</h3>
+      <div id="dailySummary"></div>
+    </div>
+  </div>
+  <!-- DAILY NODES -->
+  <div class="view" id="v-daily">
+    <div class="panel" style="margin-bottom:1rem">
+      <h2>Performance por Node &mdash; <span id="dailyDate">&uacute;ltimo dia</span></h2>
+      <p class="muted">M&eacute;trica selecionada: <strong id="dailyMetricLabel"></strong> | Target em linha vermelha tracejada | Ordenado do pior &rarr; melhor</p>
+      <div id="dailyBtns" style="margin:0.5rem 0;display:flex;gap:6px;flex-wrap:wrap"></div>
+    </div>
+    <div class="panel">
+      <div style="width:100%;overflow-x:auto"><canvas id="dailyChart" height="420"></canvas></div>
+    </div>
+    <div class="panel">
+      <h3>Resumo</h3>
+      <div id="dailySummary"></div>
+    </div>
+  </div>
+
 
 <div class="foot">
-  <b>Metodologia:</b> médias <b>ponderadas por volume</b> — Receive por <i>Picked up</i>; Stow/Depart/Missort por <i>Processed (3. Share)</i>. Fins de semana, feriados sem operação e dias sem volume são excluídos.
+  <b>Metodologia:</b> m&eacute;dias <b>ponderadas por volume</b> — Receive por <i>Picked up</i>; Stow/Depart/Missort por <i>Processed (3. Share)</i>. Fins de semana, feriados sem operação e dias sem volume são excluídos.
   <br>
-  <span class="tag">Nota Stow</span> O % de Stow pode diferir ~2-3pp do QuickSight em alguns nodes/regionais: a coluna de origem é otimista (captura parcial de falhas) e a planilha não traz o denominador exato de "stow attempts". <b>Receive e Depart batem com o QuickSight.</b>
+  <span class="tag">Nota Stow</span> O % de Stow pode diferir ~2-3pp do QuickSight em alguns nodes/regionais: a coluna de origem &eacute; otimista (captura parcial de falhas) e a planilha não traz o denominador exato de "stow attempts". <b>Receive e Depart batem com o QuickSight.</b>
 </div>
 
 <script>
@@ -606,6 +638,7 @@ function render(){
   if(active==='trend') renderTrend(metric,meta);
   if(active==='ranking') renderRanking(metric,meta);
   renderCarrier(metric,meta);
+  if(active==='daily') renderDaily(metric,meta);
 }
 
 function renderOverview(metric,meta){
@@ -671,7 +704,7 @@ function noteBest(all, meta, metric){
   const vals=all.map(a=>a.m[metric]); const media=vals.reduce((s,v)=>s+v,0)/n;
   const meet = meta.goal!=null? all.filter(a=>meetsGoal(a.m[metric],meta)).length : null;
   let li=`<li>Destaque: <b>${top.node}</b> ${top.regional?('('+top.regional+')'):''} com <span class="ok">${fmt(top.m[metric],meta.type)}</span></li>`;
-  li+=`<li>Média dos nodes: <b>${fmt(media,meta.type)}</b></li>`;
+  li+=`<li>M&eacute;dia dos nodes: <b>${fmt(media,meta.type)}</b></li>`;
   if(meet!=null) li+=`<li><span class="ok">${meet}</span> de ${n} dentro da meta (${goalTxt(meta)})</li>`;
   return `<h4>Análise · ${metric}</h4><ul>${li}</ul>`;
 }
@@ -870,7 +903,7 @@ function aggMetrics(rows){
 function deltaCell(cur, prev, meta){
   const base=`<td class="num"><span class="pill ${pillClass(cur,meta)}">${fmt(cur,meta.type)}</span>`;
   if(cur===null||prev===null||isNaN(cur)||isNaN(prev)) return base+'</td>';
-  const diff=cur-prev; if(Math.abs(diff)<1e-9) return base+'<span class="delta dneutral">→</span></td>';
+  const diff=cur-prev; if(Math.abs(diff)<1e-9) return base+'<span class="delta dneutral">&rarr;</span></td>';
   const up=diff>0; const good = meta.hib? up : !up;
   const arrow=up?'▲':'▼'; const cls=good?'du':'dd';
   const dtxt = meta.type==='pct'? (Math.abs(diff)*100).toFixed(2)+'pp' : (meta.type==='int'? Math.round(Math.abs(diff)).toLocaleString('pt-BR') : Math.abs(diff).toFixed(2));
@@ -927,7 +960,145 @@ function renderModal(){
   }
 }
 
+
+function renderDaily(metric,meta){
+  const allRows=applyFilters();
+  // Get last available day
+  const dates=[...new Set(allRows.map(d=>d.period))].sort();
+  const lastDay=dates[dates.length-1];
+  const dayRows=allRows.filter(d=>d.period===lastDay);
+  
+  document.getElementById('dailyDate').textContent=lastDay;
+  document.getElementById('dailyMetricLabel').textContent=metric;
+  
+  // Targets per metric
+  const TARGETS={
+    'Receive Success':0.995,'Receive Success ADJ':0.995,
+    'Stow Success':0.999,'Depart Success':1.0,
+    'DPMO':3500,'OTD':0.90,'Pkgs/Pallet':250,'Avg Cuft':0.20
+  };
+  const target=TARGETS[metric]||null;
+  const isInverse=(metric==='DPMO'||metric==='FM Backlog'||metric==='Wrong Node');
+  
+  // Aggregate by node for that day
+  const nodeMap={};
+  dayRows.forEach(d=>{
+    const col=meta.col;
+    const val=d[col];
+    if(val==null||isNaN(val))return;
+    const node=d.node;
+    if(!nodeMap[node]) nodeMap[node]={sum:0,wsum:0,vol:0,count:0,partner:d.partner||''};
+    const g=nodeMap[node];
+    const w=d.pu||1;
+    if(meta.type==='int'){g.sum+=val;g.vol+=w;}
+    else if(meta.wb==='avg'){g.sum+=val;g.count++;}
+    else{g.wsum+=val*w;g.vol+=w;}
+  });
+  
+  let items=Object.entries(nodeMap).map(([node,g])=>{
+    let val;
+    if(meta.type==='int') val=g.sum;
+    else if(meta.wb==='avg') val=g.count?g.sum/g.count:0;
+    else val=g.vol?g.wsum/g.vol:0;
+    return {node,val,partner:g.partner,vol:g.vol||g.count};
+  });
+  
+  // Sort: worst to best
+  if(isInverse){
+    items.sort((a,b)=>b.val-a.val); // higher is worse for DPMO
+  } else {
+    items.sort((a,b)=>a.val-b.val); // lower is worse for success metrics
+  }
+  
+  // Draw chart
+  const canvas=document.getElementById('dailyChart');
+  const ctx=canvas.getContext('2d');
+  const W=canvas.parentElement.clientWidth||1200;
+  const barH=22;
+  const gap=4;
+  const labelW=80;
+  const H=Math.max(400,(barH+gap)*items.length+60);
+  canvas.width=W;
+  canvas.height=H;
+  ctx.clearRect(0,0,W,H);
+  
+  if(items.length===0){ctx.fillText('Sem dados',W/2,H/2);return;}
+  
+  const maxVal=Math.max(...items.map(d=>d.val),target||0)*1.1;
+  const chartL=labelW+10;
+  const chartW=W-chartL-40;
+  
+  const x=v=>chartL+v/maxVal*chartW;
+  
+  // Draw target line
+  if(target!==null){
+    const tx=x(target);
+    ctx.strokeStyle='#e53e3e';
+    ctx.lineWidth=2;
+    ctx.setLineDash([6,4]);
+    ctx.beginPath();ctx.moveTo(tx,20);ctx.lineTo(tx,H-20);ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle='#e53e3e';
+    ctx.font='11px sans-serif';
+    ctx.textAlign='center';
+    const targetLabel=target<1?`Target: ${(target*100).toFixed(1)}%`:`Target: ${target.toLocaleString()}`;
+    ctx.fillText(targetLabel,tx,14);
+  }
+  
+  // Draw bars
+  items.forEach((item,i)=>{
+    const y=30+i*(barH+gap);
+    const bw=x(item.val)-chartL;
+    
+    // Color based on target
+    let color='#4299e1'; // blue default
+    if(target!==null){
+      if(isInverse){
+        color=item.val<=target?'#48bb78':'#f56565'; // green if below target for inverse
+      } else {
+        color=item.val>=target?'#48bb78':'#f56565'; // green if above target
+      }
+    }
+    
+    ctx.fillStyle=color;
+    ctx.fillRect(chartL,y,Math.max(bw,2),barH);
+    
+    // Node label
+    ctx.fillStyle='#e2e8f0';
+    ctx.font='11px monospace';
+    ctx.textAlign='right';
+    ctx.fillText(item.node,labelW,y+barH/2+4);
+    
+    // Value label
+    ctx.fillStyle='#fff';
+    ctx.textAlign='left';
+    const valText=meta.type==='pct'||meta.wb==='avg'&&item.val<2?(item.val*100).toFixed(2)+'%':
+                  meta.type==='int'?Math.round(item.val).toLocaleString():
+                  item.val.toFixed(2);
+    const labelX=chartL+Math.max(bw,2)+5;
+    ctx.fillText(valText+' ('+item.partner+')',labelX,y+barH/2+4);
+  });
+}
+
 render();
+
+// Daily Nodes metric buttons
+(function(){
+  const cont=document.getElementById('dailyBtns');
+  if(!cont)return;
+  const metrics=['Receive Success','Stow Success','Depart Success','DPMO','OTD','Pkgs/Pallet'];
+  metrics.forEach(m=>{
+    const b=document.createElement('button');
+    b.className='metbtn'+(m===document.querySelector('#fMetric')?.value?' active':'');
+    b.textContent=m;
+    b.onclick=()=>{
+      const sel=document.getElementById('fMetric');
+      if(sel){sel.value=m;sel.dispatchEvent(new Event('change'));}
+    };
+    cont.appendChild(b);
+  });
+})();
+
 </script>
 </body>
 </html>
