@@ -103,7 +103,7 @@
 <body>
 <header>
   <h1><span class="logo">amazon</span> &nbsp;UTR Node LVL &middot; First Mile Brasil</h1>
-  <span class="gen">Atualizado: 18/08/2026 13:39</span>
+  <span class="gen">Atualizado: 18/08/2026 17:24</span>
 </header>
 
 <div class="bar">
@@ -637,7 +637,7 @@ function render(){
   if(active==='overview') renderOverview(metric,meta);
   if(active==='trend') renderTrend(metric,meta);
   if(active==='ranking') renderRanking(metric,meta);
-  renderCarrier(metric,meta);
+  if(active==='carrier') renderCarrier(metric,meta);
   if(active==='daily') renderDaily(metric,meta);
 }
 
