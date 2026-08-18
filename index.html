@@ -103,7 +103,7 @@
 <body>
 <header>
   <h1><span class="logo">amazon</span> &nbsp;UTR Node LVL &middot; First Mile Brasil</h1>
-  <span class="gen">Atualizado: 18/08/2026 11:46</span>
+  <span class="gen">Atualizado: 18/08/2026 13:39</span>
 </header>
 
 <div class="bar">
@@ -968,28 +968,29 @@ function renderDaily(metric,meta){
   const lastDay=dates[dates.length-1];
   const dayRows=allRows.filter(d=>d.period===lastDay);
   
-  document.getElementById('dailyDate').textContent=lastDay;
+  document.getElementById('dailyDate').textContent=lastDay||'N/A';
   document.getElementById('dailyMetricLabel').textContent=metric;
   
   // Targets per metric
   const TARGETS={
     'Receive Success':0.995,'Receive Success ADJ':0.995,
     'Stow Success':0.999,'Depart Success':1.0,
-    'DPMO':3500,'OTD':0.90,'Pkgs/Pallet':250,'Avg Cuft':0.20
+    'DPMO':3500,'OTD':0.90,'Pkgs/Pallet':250,'Avg Cuft':0.20,
+    'Missort DPMO':3500
   };
   const target=TARGETS[metric]||null;
-  const isInverse=(metric==='DPMO'||metric==='FM Backlog'||metric==='Wrong Node');
+  const isInverse=(metric==='Missort DPMO'||metric==='FM Backlog'||metric==='Wrong Node'||metric==='Missort');
   
-  // Aggregate by node for that day
+  // Aggregate by node for that day - using d.m[metric] pattern
+  const VOL='Picked Up (vol)';
   const nodeMap={};
   dayRows.forEach(d=>{
-    const col=meta.col;
-    const val=d[col];
+    const val=d.m[metric];
     if(val==null||isNaN(val))return;
     const node=d.node;
-    if(!nodeMap[node]) nodeMap[node]={sum:0,wsum:0,vol:0,count:0,partner:d.partner||''};
+    if(!nodeMap[node]) nodeMap[node]={sum:0,wsum:0,vol:0,count:0,partner:d.partner||'',regional:d.regional||''};
     const g=nodeMap[node];
-    const w=d.pu||1;
+    const w=d.m[VOL]||1;
     if(meta.type==='int'){g.sum+=val;g.vol+=w;}
     else if(meta.wb==='avg'){g.sum+=val;g.count++;}
     else{g.wsum+=val*w;g.vol+=w;}
@@ -1000,7 +1001,7 @@ function renderDaily(metric,meta){
     if(meta.type==='int') val=g.sum;
     else if(meta.wb==='avg') val=g.count?g.sum/g.count:0;
     else val=g.vol?g.wsum/g.vol:0;
-    return {node,val,partner:g.partner,vol:g.vol||g.count};
+    return {node,val,partner:g.partner,regional:g.regional,vol:g.vol||g.count};
   });
   
   // Sort: worst to best
@@ -1010,25 +1011,35 @@ function renderDaily(metric,meta){
     items.sort((a,b)=>a.val-b.val); // lower is worse for success metrics
   }
   
+  // Remove items with val=0 (no data)
+  items=items.filter(d=>d.val>0 || meta.type==='int');
+  
   // Draw chart
   const canvas=document.getElementById('dailyChart');
   const ctx=canvas.getContext('2d');
   const W=canvas.parentElement.clientWidth||1200;
-  const barH=22;
-  const gap=4;
-  const labelW=80;
+  const barH=20;
+  const gap=3;
+  const labelW=90;
   const H=Math.max(400,(barH+gap)*items.length+60);
   canvas.width=W;
   canvas.height=H;
   ctx.clearRect(0,0,W,H);
   
-  if(items.length===0){ctx.fillText('Sem dados',W/2,H/2);return;}
+  if(items.length===0){
+    ctx.fillStyle='#a0aec0';
+    ctx.font='14px sans-serif';
+    ctx.textAlign='center';
+    ctx.fillText('Sem dados para '+metric+' em '+lastDay,W/2,H/2);
+    document.getElementById('dailySummary').innerHTML='';
+    return;
+  }
   
-  const maxVal=Math.max(...items.map(d=>d.val),target||0)*1.1;
+  const maxVal=Math.max(...items.map(d=>d.val),target||0)*1.15;
   const chartL=labelW+10;
-  const chartW=W-chartL-40;
+  const chartW=W-chartL-50;
   
-  const x=v=>chartL+v/maxVal*chartW;
+  const x=v=>chartL+(v/maxVal)*chartW;
   
   // Draw target line
   if(target!==null){
@@ -1041,11 +1052,12 @@ function renderDaily(metric,meta){
     ctx.fillStyle='#e53e3e';
     ctx.font='11px sans-serif';
     ctx.textAlign='center';
-    const targetLabel=target<1?`Target: ${(target*100).toFixed(1)}%`:`Target: ${target.toLocaleString()}`;
+    const targetLabel=target<1?(target*100).toFixed(1)+'% (Target)':'Target: '+target.toLocaleString();
     ctx.fillText(targetLabel,tx,14);
   }
   
   // Draw bars
+  let aboveTarget=0, belowTarget=0;
   items.forEach((item,i)=>{
     const y=30+i*(barH+gap);
     const bw=x(item.val)-chartL;
@@ -1054,9 +1066,11 @@ function renderDaily(metric,meta){
     let color='#4299e1'; // blue default
     if(target!==null){
       if(isInverse){
-        color=item.val<=target?'#48bb78':'#f56565'; // green if below target for inverse
+        color=item.val<=target?'#48bb78':'#f56565';
+        if(item.val<=target) aboveTarget++; else belowTarget++;
       } else {
-        color=item.val>=target?'#48bb78':'#f56565'; // green if above target
+        color=item.val>=target?'#48bb78':'#f56565';
+        if(item.val>=target) aboveTarget++; else belowTarget++;
       }
     }
     
@@ -1064,23 +1078,32 @@ function renderDaily(metric,meta){
     ctx.fillRect(chartL,y,Math.max(bw,2),barH);
     
     // Node label
-    ctx.fillStyle='#e2e8f0';
-    ctx.font='11px monospace';
+    ctx.fillStyle='#cbd5e0';
+    ctx.font='10px monospace';
     ctx.textAlign='right';
-    ctx.fillText(item.node,labelW,y+barH/2+4);
+    ctx.fillText(item.node,labelW,y+barH/2+3);
     
     // Value label
-    ctx.fillStyle='#fff';
+    ctx.fillStyle='#e2e8f0';
     ctx.textAlign='left';
-    const valText=meta.type==='pct'||meta.wb==='avg'&&item.val<2?(item.val*100).toFixed(2)+'%':
+    const valText=meta.type==='pct'||(meta.type!=='int'&&item.val<2)?(item.val*100).toFixed(2)+'%':
                   meta.type==='int'?Math.round(item.val).toLocaleString():
-                  item.val.toFixed(2);
+                  item.val<10?item.val.toFixed(2):Math.round(item.val).toLocaleString();
     const labelX=chartL+Math.max(bw,2)+5;
-    ctx.fillText(valText+' ('+item.partner+')',labelX,y+barH/2+4);
+    ctx.fillText(valText+' ('+item.partner+')',labelX,y+barH/2+3);
   });
+  
+  // Summary
+  const summaryEl=document.getElementById('dailySummary');
+  summaryEl.innerHTML=`
+    <div style="display:flex;gap:1.5rem;flex-wrap:wrap;margin-top:0.5rem">
+      <div><span style="color:#48bb78;font-weight:bold">${aboveTarget}</span> nodes dentro do target</div>
+      <div><span style="color:#f56565;font-weight:bold">${belowTarget}</span> nodes fora do target</div>
+      <div><span style="color:#a0aec0">Total: ${items.length} nodes</span></div>
+    </div>
+    <p style="margin-top:0.5rem;color:#718096;font-size:0.85rem">Dia: ${lastDay} | ${dayRows.length} registros</p>
+  `;
 }
-
-render();
 
 // Daily Nodes metric buttons
 (function(){
