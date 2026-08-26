@@ -103,7 +103,7 @@
 <body>
 <header>
   <h1><span class="logo">amazon</span> &nbsp;UTR Node LVL &middot; First Mile Brasil</h1>
-  <span class="gen">Atualizado: 26/08/2026 11:17</span>
+  <span class="gen">Atualizado: 26/08/2026 13:01</span>
 </header>
 
 <div class="bar">
@@ -334,6 +334,9 @@ function fmt(v, type){
   return v.toLocaleString('pt-BR',{maximumFractionDigits:2});
 }
 function metaFor(label){ return METRICS.find(m=>m.label===label); }
+// Metricas visiveis no dashboard. Para VOLTAR uma metrica, tire o nome deste set.
+const HIDDEN_METRICS = new Set(["Receive Success ADJ","Depart Success","Missort","Missort DPMO","Reslam","Wrong Node (by design)","Picked Up (vol)","Avg Cuft"]);
+const VISIBLE_METRICS = METRICS.filter(m=>!HIDDEN_METRICS.has(m.label));
 function semNum(s){ const m=(''+s).match(/(\d+)/); return m?parseInt(m[1]):9999; }
 const MESES=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 function mesNome(n){ const i=parseInt(n); return (i>=1&&i<=12)? MESES[i-1] : ('M'+i); }
@@ -344,7 +347,7 @@ function sortLabels(vals, key){
 }
 
 // metrica: selecao unica
-METRICS.forEach(m=>{ const o=document.createElement('option'); o.value=m.label; o.textContent=m.label; $('fMetric').appendChild(o); });
+VISIBLE_METRICS.forEach(m=>{ const o=document.createElement('option'); o.value=m.label; o.textContent=m.label; $('fMetric').appendChild(o); });
 $('fMetric').addEventListener('change', render);
 
 // multi-select por checkbox
@@ -649,7 +652,7 @@ function renderOverview(metric,meta){
   const scopeTxt=periodScopeText();
   const agg=aggByNode(rows);
   const cards=$('cards'); cards.innerHTML='';
-  METRICS.forEach(mt=>{
+  VISIBLE_METRICS.forEach(mt=>{
     const lb=mt.label;
     const a=wagg(rows, lb, mt.type);
     const c=document.createElement('div'); c.className='card'+(lb===metric?' active':'');
@@ -666,10 +669,10 @@ function renderOverview(metric,meta){
   const rr=(a,i)=>`<tr><td class="rank">${i+1}</td><td>${a.node}</td><td class="muted">${a.regional||''} ${a.def||''}</td><td class="num"><span class="pill ${pillClass(a.m[metric],meta)}">${fmt(a.m[metric],meta.type)}</span></td></tr>`;
   $('bestBody').innerHTML=best.map(rr).join('')||'<tr><td class="muted">Sem dados</td></tr>';
   $('worstBody').innerHTML=worst.map(rr).join('')||'<tr><td class="muted">Sem dados</td></tr>';
-  $('detailHead').innerHTML='<th>Node</th><th>Regional</th><th>Partner</th><th>Tipo</th>'+METRICS.map(m=>`<th class="num">${m.label}</th>`).join('');
+  $('detailHead').innerHTML='<th>Node</th><th>Regional</th><th>Partner</th><th>Tipo</th>'+VISIBLE_METRICS.map(m=>`<th class="num">${m.label}</th>`).join('');
   const det=[...agg].sort((a,b)=>{ const av=a.m[metric],bv=b.m[metric]; if(av===null)return 1; if(bv===null)return -1; return meta.hib? bv-av : av-bv; });
   $('detailBody').innerHTML=det.map(a=>{
-    const cells=METRICS.map(m=>`<td class="num"><span class="pill ${pillClass(a.m[m.label],m)}">${fmt(a.m[m.label],m.type)}</span></td>`).join('');
+    const cells=VISIBLE_METRICS.map(m=>`<td class="num"><span class="pill ${pillClass(a.m[m.label],m)}">${fmt(a.m[m.label],m.type)}</span></td>`).join('');
     return `<tr data-node="${a.node}"><td>${a.node}</td><td class="muted">${a.regional||''}</td><td class="muted">${a.partner||''}</td><td class="muted">${a.def||''}</td>${cells}</tr>`;
   }).join('');
   $('detailCount').textContent=`· ${scopeTxt} · ${agg.length} nodes / ${rows.length} registros`;
@@ -914,7 +917,7 @@ function renderModal(){
   if(!MODAL_NODE) return;
   const rows=DATA.filter(d=>d.node===MODAL_NODE);
   const head=$('mHead'), body=$('mBody');
-  const metricCols=METRICS.map(m=>`<th class="num">${m.label}</th>`).join('');
+  const metricCols=VISIBLE_METRICS.map(m=>`<th class="num">${m.label}</th>`).join('');
 
   if(MODAL_MODE==='dia'){
     head.innerHTML='<th>Data</th><th>Semana</th>'+metricCols;
